@@ -121,6 +121,7 @@ D3DDevice_SetRenderState_ZEnable                     = 0x4A0210
 D3DDevice_SetRenderStateNotInline                    = 0x49EFF0
 D3DDevice_SetRenderTarget                            = 0x49A850
 D3DDevice_SetScissors                                = 0x49B480
+D3DDevice_SetDepthClipPlanes                         = 0
 D3DDevice_SetScreenSpaceOffset                       = 0x49B930
 D3DDevice_SetShaderConstantMode                      = 0x49EBB0
 D3DDevice_SetSoftDisplayFilter                       = 0x49A6A0

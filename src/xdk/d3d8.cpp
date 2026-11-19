@@ -48,7 +48,8 @@ constexpr uint32_t kInitDefaultState = SYM(D3D_InitDefaultState);
 constexpr uint32_t kDevPush = 0x00, kDevThreshold = 0x04, kDevBaseVertex = 0x1C, kDevIndexBuffer = 0x7A0,
                    kDevTextures = 0xF88, kDevRenderTarget = 0x1A04, kDevDepth = 0x1A08, kDevSwapCount = 0x2478,
                    kDevFrameBuffer = 0x1A14, kDevFrameBufferSize = 0x1A18, kDevZScale = 0x948, kDevSuperX = 0x95C,
-                   kDevSuperY = 0x960;
+                   kDevSuperY = 0x960, kDevVertexShader = 0x794;
+uint32_t g_empty_vs = 0;
 
 gpu::State g_state;
 std::unique_ptr<gpu::Backend> g_backend;
@@ -228,6 +229,13 @@ HLE_STDCALL(Direct3D_CreateDevice, 6) {
     g_scratch_push = mem::AllocContiguous(0x10000, 0, 0xFFFFFFFF, 0x1000);
     SetDev(kDevPush, g_scratch_push);
     SetDev(kDevThreshold, g_scratch_push + 0xF000);
+    // the current vertex shader, as the XDK's own code reads it: an empty one (no flags), the host keeps the real ones
+    // (Pandora Tomorrow's XDK runs more of its own state code, which reads it)
+    if (!g_empty_vs) {
+        g_empty_vs = mem::AllocSystem(0x80);
+        std::memset(HostPtr(g_empty_vs), 0, 0x80);
+    }
+    SetDev(kDevVertexShader, g_empty_vs);
 
     uint32_t color_fmt = gpu::LinearColorFormat(fmt);
     g_buffer_count = std::min<uint32_t>(count + 1, 3);
@@ -498,6 +506,9 @@ HLE_STDCALL(D3DDevice_SetScissors, 3) {
     for (uint32_t i = 0; i < g_state.scissor_count * 4; i++) g_state.scissors[i] = R32(a[2] + i * 4);
     return 0;
 }
+
+// (near, far, D3DSDCP_* flags): the renderer takes depth from the viewport alone (Pandora Tomorrow sets them)
+HLE_STDCALL(D3DDevice_SetDepthClipPlanes, 3) { return 0; }
 
 HLE_STDCALL(D3DDevice_SetScreenSpaceOffset, 2) {
     g_state.ss_offset_x = ArgF(a, 0);
