@@ -36,7 +36,7 @@ constexpr wchar_t kTitle[] = L"Splinter Cell: Chaos Theory";
 #endif
 
 // assets beside the exe or in any folder above it (the build output); the port also takes game/, as the Switch
-// layout has it (sdmc:/switch/scct/game)
+// layout has it (sdmc:/switch/scpt/game)
 fs::path FindAssets() {
     auto dir = ExeDir();
     std::error_code ec;

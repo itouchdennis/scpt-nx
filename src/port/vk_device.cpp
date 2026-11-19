@@ -60,8 +60,8 @@ bool Device::Init() {
         return false;
     }
     VkApplicationInfo app{VK_STRUCTURE_TYPE_APPLICATION_INFO};
-    app.pApplicationName = "scct";
-    app.pEngineName = "scct";
+    app.pApplicationName = "scpt";
+    app.pEngineName = "scpt";
     app.apiVersion = VK_API_VERSION_1_3;
     VkInstanceCreateInfo ci{VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO};
     ci.pApplicationInfo = &app;

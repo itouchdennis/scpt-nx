@@ -20,9 +20,9 @@ set(SCDA_NVK_SDK "" CACHE PATH "Switch, SCDA_GPU=vk: the Mesa Horizon SDK's port
 set(SCDA_GEN_DIR ${CMAKE_CURRENT_SOURCE_DIR}/generated/game CACHE PATH "generated code of the image")
 # the image: its recompiler config, its XBE in assets/ and the folder of its game patches (src/<dir>), which override
 # recompiled functions by address and so belong to that image alone
-set(SCDA_IMAGE_CONFIG config/sc3.toml CACHE STRING "the image's recompiler config")
-set(SCDA_IMAGE_XBE assets/sc3.xbe CACHE STRING "the image's XBE")
-set(SCDA_GAME_DIR src/sc3 CACHE STRING "the image's game patches")
+set(SCDA_IMAGE_CONFIG config/scpt.toml CACHE STRING "the image's recompiler config")
+set(SCDA_IMAGE_XBE assets/Offline.xbe CACHE STRING "the image's XBE")
+set(SCDA_GAME_DIR src/scpt CACHE STRING "the image's game patches")
 set(SCDA_PARTITIONS 128)
 
 file(GLOB RECOMP_CONFIGS CONFIGURE_DEPENDS config/*.toml)
@@ -198,9 +198,9 @@ if(SCDA_SWITCH)
         "LINKER:--wrap=malloc" "LINKER:--wrap=calloc" "LINKER:--wrap=realloc" "LINKER:--wrap=memalign")
 endif()
 if(SCDA_SWITCH AND NOT SCDA_CHECK_ONLY)
-    # the NRO for hbmenu: sdmc:/switch/scct/scct.nro
+    # the NRO for hbmenu: sdmc:/switch/scpt/scpt.nro
     set(SCDA_NACP ${CMAKE_CURRENT_BINARY_DIR}/scda.nacp)
-    nx_generate_nacp(OUTPUT ${SCDA_NACP} NAME "Splinter Cell: Chaos Theory" AUTHOR "scct-nx"
+    nx_generate_nacp(OUTPUT ${SCDA_NACP} NAME "Splinter Cell: Pandora Tomorrow" AUTHOR "scpt-nx"
         VERSION "${PROJECT_VERSION}")
     # your own 256x256 JPEG for hbmenu, kept out of git: switch/icon.jpg, or one given by path
     set(SCDA_ICON ${CMAKE_CURRENT_SOURCE_DIR}/switch/icon.jpg CACHE FILEPATH "the NRO's hbmenu icon, if it exists")

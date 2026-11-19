@@ -471,7 +471,7 @@ int main(int argc, char** argv) {
 #endif
     port::Init(argc, argv);
     port::Breadcrumb("log opening");
-    std::string log = app::Instance() > 1 ? "scct-" + std::to_string(app::Instance()) : "scct";
+    std::string log = app::Instance() > 1 ? "scpt-" + std::to_string(app::Instance()) : "scpt";
     logx::Init((app::ExeDir() / "logs").string(), log, port::Relaunched());
     port::Breadcrumb(("log open: " + logx::Path()).c_str());
     app::Load();

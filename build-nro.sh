@@ -5,7 +5,7 @@
 #   ./build-nro.sh "/path/to/your extracted disc"   (a folder with sc3.xbe, Default/, Media/)
 #
 # It installs what is missing (asking for your password through sudo), builds the Switch toolchain's Vulkan driver
-# once, recompiles the game from your sc3.xbe and leaves a folder to copy onto the SD card: out/switch/scct/.
+# once, recompiles the game from your sc3.xbe and leaves a folder to copy onto the SD card: out/switch/scpt/.
 # Nothing of the game is downloaded or uploaded: everything is made here, from your files, and stays on this machine.
 #
 #   CACHE          where the driver, tools and recompiled code are kept between runs (default ~/.cache/scct-nx)
@@ -72,7 +72,7 @@ echo "all there"
 mkdir -p "$CACHE"
 
 # --- 2. the game ------------------------------------------------------------------------------------------------------
-DEST="$OUT/switch/scct"
+DEST="$OUT/switch/scpt"
 GAME="$DEST/game"
 step "Game files -> $GAME"
 mkdir -p "$GAME"
@@ -135,11 +135,11 @@ fi
 # --- 5. the NRO -------------------------------------------------------------------------------------------------------
 step "Building the NRO (the first time can take a while, depending on your PC)"
 SCDA_GEN_DIR="$GEN" SCDA_NVK_SDK="$NVK" SD_ROOT="$OUT" BUILD_DIR="$CACHE/build-switch-vk" "$REPO/switch/build.sh"
-[ -f "$DEST/scct.nro" ] || fail "no NRO was made"
+[ -f "$DEST/scpt.nro" ] || fail "no NRO was made"
 
 step "Done"
 echo "Copy the folder $OUT/switch onto the root of your SD card, so that it holds"
-echo "  sdmc:/switch/scct/scct.nro and sdmc:/switch/scct/game/sc3.xbe"
+echo "  sdmc:/switch/scpt/scpt.nro and sdmc:/switch/scpt/game/sc3.xbe"
 echo "and start it from the Homebrew Menu with title takeover: hold R while starting any game."
 echo
 echo "The NRO holds code made from your copy of the game: it is for you only, please do not share it."

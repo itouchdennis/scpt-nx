@@ -6,7 +6,7 @@
 #   ./build-nro-docker.sh "/path/to/your extracted disc"    (a folder with sc3.xbe, Default/, Media/)
 #
 # Your game is mounted read only into the container and never leaves this computer; the SD card folder is made in
-# out/ beside this script (out/switch/scct/). The recompiled code and the build are kept in the Docker volume
+# out/ beside this script (out/switch/scpt/). The recompiled code and the build are kept in the Docker volume
 # scct-nx-cache, so later runs are quicker; `docker volume rm scct-nx-cache` removes them.
 #
 #   OUT            the output folder (default out/ beside this script)

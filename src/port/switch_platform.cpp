@@ -1,5 +1,5 @@
-// port/port.h on the Switch (libnx). The game lives in sdmc:/switch/scct: scct.nro, game/ with the extracted disc,
-// scct.toml, logs/ and hdd/. A relaunch (front end to mission) hands hbloader the next NRO to load with
+// port/port.h on the Switch (libnx). The game lives in sdmc:/switch/scpt: scpt.nro, game/ with the extracted disc,
+// scpt.toml, logs/ and hdd/. A relaunch (front end to mission) hands hbloader the next NRO to load with
 // envSetNextLoad and exits; the launch data travels in hdd/launch.bin as on Windows.
 #include <arpa/inet.h>  // struct in_addr for nxlink.h
 #include <switch.h>
@@ -95,7 +95,7 @@ extern "C" void __libnx_initheap(void) {
 namespace port {
 
 namespace {
-const std::filesystem::path kHome = "sdmc:/switch/scct";
+const std::filesystem::path kHome = "sdmc:/switch/scpt";
 std::string g_command_line;
 bool g_relaunched = false;
 bool g_sockets = false;
@@ -201,7 +201,7 @@ void RestoreClocks() {
 
 // started by nxlink -s: stderr goes to the PC, and the log with it (core/log.cpp)
 bool g_nxlink = false;
-bool g_boot_log = true;  // scct.toml's logging
+bool g_boot_log = true;  // scpt.toml's logging
 
 void SetBootLog(bool on) { g_boot_log = on; }
 
@@ -213,7 +213,7 @@ void Breadcrumb(const char* step) {
     // from hbloader's arguments, not Init's: a crash before main must not wipe the runs before it
     const char* args = static_cast<const char*>(envGetArgv());
     bool relaunched = g_relaunched || (args && std::strstr(args, "--relaunched"));
-    if (FILE* f = std::fopen("sdmc:/switch/scct/logs/boot.txt", first && !relaunched ? "w" : "a")) {
+    if (FILE* f = std::fopen("sdmc:/switch/scpt/logs/boot.txt", first && !relaunched ? "w" : "a")) {
         if (first) std::fprintf(f, "--- %s\n", relaunched ? "relaunched" : "started");
         std::fprintf(f, "%llu ms %s\n", (unsigned long long)(armTicksToNs(armGetSystemTick()) / 1000000), step);
         std::fclose(f);
@@ -225,7 +225,7 @@ void Breadcrumb(const char* step) {
 void WriteCrash(const char* what) {
     if (g_nxlink) std::fprintf(stderr, "[crash] %s\n", what);
     Breadcrumb((std::string("CRASH: ") + what).c_str());
-    if (FILE* f = std::fopen("sdmc:/switch/scct/logs/crash.txt", "w")) {
+    if (FILE* f = std::fopen("sdmc:/switch/scpt/logs/crash.txt", "w")) {
         std::fprintf(f, "%s\n", what);
         std::fclose(f);
     }
@@ -585,7 +585,7 @@ size_t StackMirrorSize(const Thread* t) {
     const bool home = g_home.load();
     const char* why = home ? "exit" : "relaunch";
     // unbuffered: each step is on the card before the next begins, so a step that hangs is the last one listed
-    FILE* f = g_boot_log ? std::fopen("sdmc:/switch/scct/logs/boot.txt", "a") : nullptr;
+    FILE* f = g_boot_log ? std::fopen("sdmc:/switch/scpt/logs/boot.txt", "a") : nullptr;
     if (f) std::setvbuf(f, nullptr, _IONBF, 0);
     auto step = [&](const char* what) {
         if (f)
@@ -703,7 +703,7 @@ void Exit(int code) {
     Leave();
 }
 
-// hbloader starts the image's NRO after this one exits: sdmc:/switch/scct/scct.nro for default.xbe,
+// hbloader starts the image's NRO after this one exits: sdmc:/switch/scpt/scpt.nro for default.xbe,
 // and the same NRO for default.xbe, the launcher
 void Relaunch(const char* exe, const std::string& extra) {
     std::string name = exe;
@@ -823,7 +823,7 @@ void __libnx_exception_handler(ThreadExceptionDump* ctx) {
     std::snprintf(step, sizeof(step), "CRASH: exception %u at pc elf +%llX", ctx->error_desc,
                   (unsigned long long)(ctx->pc.x - start));
     port::Breadcrumb(step);
-    if (FILE* f = std::fopen("sdmc:/switch/scct/logs/crash.txt", "w")) {
+    if (FILE* f = std::fopen("sdmc:/switch/scpt/logs/crash.txt", "w")) {
         std::fprintf(f, "exception %u\npc  elf +%llX\nlr  elf +%llX\nsp  %llX\nfar %llX (guest %08llX)\n",
                      ctx->error_desc, (unsigned long long)(ctx->pc.x - start), (unsigned long long)(ctx->lr.x - start),
                      (unsigned long long)ctx->sp.x, (unsigned long long)far,
