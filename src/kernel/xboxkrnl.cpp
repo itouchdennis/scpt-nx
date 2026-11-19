@@ -255,6 +255,14 @@ KERNEL_EXPORT(99, KeDelayExecutionThread, 3) {
     return kSuccess;
 }
 
+// gives up the rest of the time slice, as KeDelayExecutionThread with a zero interval (Pandora Tomorrow's XAPI
+// SwitchToThread)
+KERNEL_EXPORT(238, NtYieldExecution, 0) {
+    g_yields.fetch_add(1, std::memory_order_relaxed);
+    std::this_thread::yield();
+    return kSuccess;
+}
+
 static int64_t DaysFromCivil(int64_t y, unsigned m, unsigned d) {
     y -= m <= 2;
     const int64_t era = (y >= 0 ? y : y - 399) / 400;
