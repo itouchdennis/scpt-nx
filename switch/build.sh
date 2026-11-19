@@ -2,7 +2,7 @@
 # Build the Switch homebrew NRO and stage an SD card layout:
 #
 #   <SD>/switch/scpt/scpt.nro
-#   <SD>/switch/scpt/game/       the extracted disc: sc3.xbe, Default/, Media/, ...
+#   <SD>/switch/scpt/game/       the extracted disc: Offline.xbe, Offline/, Default/, ...
 #   <SD>/switch/scpt/scpt.toml   settings, written by the game
 #   <SD>/switch/scpt/logs/       the log
 #   <SD>/switch/scpt/hdd/        saves
@@ -87,5 +87,5 @@ fi
 echo
 echo "staged $DEST"
 echo "  scpt.nro $(stat -c %s "$DEST/scpt.nro") bytes, game/ $(du -sh "$DEST/game" | cut -f1)"
-echo "  copy scpt.nro to <SD>/switch/scpt/ and the extracted disc (sc3.xbe, Default/, Media/, ...) to"
+echo "  copy scpt.nro to <SD>/switch/scpt/ and the extracted disc (Offline.xbe, Offline/, Default/, ...) to"
 echo "  <SD>/switch/scpt/game/, then start it from hbmenu with title takeover (hold R on a game)"
