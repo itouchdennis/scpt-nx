@@ -970,15 +970,9 @@ bool UsesOwnImage(const std::vector<uint8_t>& img) {
 
 // Effects run on the console's DSP, only the crosstalk is reproduced (AddCrosstalk). The descriptor keeps the
 // image's effect list so the title finds its indices, every segment points at zeroed memory.
-HLE_STDCALL(XAudioDownloadEffectsImage, 4) {
-    std::string name = ReadCString(a[0]);
-    std::vector<uint8_t> img;
-    if (a[2] & 1) {
-        for (auto& sec : g_image->sections)
-            if (sec.name == name) img.assign(static_cast<uint8_t*>(HostPtr(sec.va)), static_cast<uint8_t*>(HostPtr(sec.va)) + sec.vsize);
-    } else {
-        ReadGameFile(name, img);
-    }
+// an effects image (dsstdfx.bin) as the APU took it: its effects' descriptions with zeroed memory for their state,
+// the description list written to *desc_out
+static void DownloadEffects(const std::string& name, const std::vector<uint8_t>& img, uint32_t desc_out) {
     auto u32 = [&](size_t o) { uint32_t v = 0; if (o + 4 <= img.size()) std::memcpy(&v, &img[o], 4); return v; };
     size_t t = 0x818 + size_t(u32(0x804) + u32(0x80C)) * 4;
     uint32_t count = std::min<uint32_t>(u32(t), 64);
@@ -1001,7 +995,27 @@ HLE_STDCALL(XAudioDownloadEffectsImage, 4) {
             W32(d + k * 8 + 4, size);
         }
     }
-    if (a[3]) W32(a[3], desc);
+    if (desc_out) W32(desc_out, desc);
+}
+
+HLE_STDCALL(XAudioDownloadEffectsImage, 4) {
+    std::string name = ReadCString(a[0]);
+    std::vector<uint8_t> img;
+    if (a[2] & 1) {
+        for (auto& sec : g_image->sections)
+            if (sec.name == name) img.assign(static_cast<uint8_t*>(HostPtr(sec.va)), static_cast<uint8_t*>(HostPtr(sec.va)) + sec.vsize);
+    } else {
+        ReadGameFile(name, img);
+    }
+    DownloadEffects(name, img, a[3]);
+    return 0;
+}
+
+// (this, image, size, location, desc out): the image the title read itself (Pandora Tomorrow)
+HLE_STDCALL(IDirectSound_DownloadEffectsImage, 5) {
+    std::vector<uint8_t> img;
+    if (a[1] && a[2]) img.assign(static_cast<uint8_t*>(HostPtr(a[1])), static_cast<uint8_t*>(HostPtr(a[1])) + a[2]);
+    DownloadEffects("(in memory)", img, a[4]);
     return 0;
 }
 

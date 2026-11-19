@@ -155,6 +155,7 @@ getsockname                                          = 0x3EECF0
 getsockopt                                           = 0
 IDirectSound_CommitDeferredSettings                  = 0x459A73
 IDirectSound_CreateSoundBuffer                       = 0x459F0C
+IDirectSound_DownloadEffectsImage                    = 0
 IDirectSound_EnableHeadphones                        = 0x458052
 IDirectSound_GetSpeakerConfig                        = 0x45800C
 IDirectSound_Release                                 = 0x456D01
