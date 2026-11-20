@@ -119,6 +119,19 @@ void UpdateViewportConstants() {
     g_state.vsc[58] = {hw * g_view_scale, -hh * g_view_scale, (v.max_z - v.min_z) * g_state.zscale, 0};
     g_state.vsc[59] = {v.x + g_state.ss_offset_x + hw, v.y + g_state.ss_offset_y + hh, v.min_z * g_state.zscale, 0};
     gpu::MarkVsc(58, 2);
+    // the device's projection times viewport matrix (+0x980), which the XDK keeps up with SetTransform(PROJECTION)
+    // and SetViewport and GetProjectionViewportMatrix reads: Pandora Tomorrow projects and culls with it
+    const float* p = g_state.transforms[3].data();  // the projection, row vectors
+    float sx = hw, sy = -hh, sz = (v.max_z - v.min_z) * g_state.zscale;
+    float ox = v.x + g_state.ss_offset_x + hw, oy = v.y + g_state.ss_offset_y + hh, oz = v.min_z * g_state.zscale;
+    float m[16];
+    for (int r = 0; r < 4; r++) {
+        m[r * 4 + 0] = p[r * 4 + 0] * sx + p[r * 4 + 3] * ox;
+        m[r * 4 + 1] = p[r * 4 + 1] * sy + p[r * 4 + 3] * oy;
+        m[r * 4 + 2] = p[r * 4 + 2] * sz + p[r * 4 + 3] * oz;
+        m[r * 4 + 3] = p[r * 4 + 3];
+    }
+    std::memcpy(HostPtr(kDevice + 0x980), m, sizeof(m));
 }
 
 void SetComplex(uint32_t rs, uint32_t v) {
@@ -623,11 +636,13 @@ HLE_STDCALL(D3DDevice_SetTransform, 2) {
     uint32_t pc = t < 2 ? t + 2 : t < 6 ? t + 14 : t + 250;
     std::memcpy(g_state.transforms[pc].data(), HostPtr(a[1]), 64);
     gpu::g_transform_writes++;
+    if (t == 1) UpdateViewportConstants();  // the projection viewport matrix follows the projection
     return 0;
 }
 
 HLE_STDCALL(D3DDevice_SetMaterial, 1) {
     std::memcpy(g_state.material.data(), HostPtr(a[0]), 17 * 4);
+    std::memcpy(HostPtr(kDevice + 0xF00), HostPtr(a[0]), 17 * 4);  // the device's copy, as the XDK keeps it
     return 0;
 }
 
