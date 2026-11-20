@@ -32,7 +32,7 @@ namespace {
 namespace fs = std::filesystem;
 
 #ifdef _WIN32
-constexpr wchar_t kTitle[] = L"Splinter Cell: Chaos Theory";
+constexpr wchar_t kTitle[] = L"Splinter Cell: Pandora Tomorrow";
 #endif
 
 // assets beside the exe or in any folder above it (the build output); the port also takes game/, as the Switch
@@ -130,7 +130,7 @@ bool FindGame(GameFiles& game) {
                     L"sc4_adv.xbe with the Default, Media and adv folders beside them).",
                     kTitle, MB_ICONERROR);
 #else
-        port::Fatal("Splinter Cell: Chaos Theory",
+        port::Fatal("Splinter Cell: Pandora Tomorrow",
                     "Put the game's files (default.xbe with the Default and Media folders beside it) or its disc "
                     "image (.iso) in " + (ExeDir() / "game").string());
 #endif
