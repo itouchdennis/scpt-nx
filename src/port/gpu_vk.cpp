@@ -2409,6 +2409,11 @@ void VkBackend::Clear(const State& s, uint32_t count, const uint8_t* rects, uint
 void VkBackend::Copy(const Surface& src, const Surface& dst, uint32_t count, uint32_t src_rects,
                      uint32_t dst_points) {
     auto timed = Time(kCopy);
+    if (const char* e = std::getenv("SCDA_DRAW_TRACE"); e && presents_ == std::strtoull(e, nullptr, 10)) {
+        GuestRect r0 = count && src_rects ? ReadGuestRect(src_rects, 0) : GuestRect{};
+        LOGI("trace copy (%llu draws): %08X -> %08X, %u rects, first %d,%d-%d,%d", (unsigned long long)draws_,
+             src.data, dst.data, count, r0.left, r0.top, r0.right, r0.bottom);
+    }
     Target* src_t = FindTarget(src, false);
     // pixels the CPU made: the copy happens in memory, textures and targets pick it up from there
     if (!src_t || !src_t->drawn) {

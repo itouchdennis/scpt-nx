@@ -856,8 +856,21 @@ HLE_STDCALL(D3DDevice_SetPixelShaderConstant, 3) {
 
 // drawing
 
+// A pass into a back buffer that a scissor keeps to a small corner at its origin: on the console it lands in what the
+// television's overscan hid (Pandora Tomorrow composites its glow chain's 32 x 32 pass there, the scissor of that
+// pass still set, and never reads it back), here it would show as a coloured square
+static bool OverscanCorner() {
+    if (g_state.scissor_count != 1 || g_state.scissors[0] != 0 || g_state.scissors[1] != 0 ||
+        g_state.scissors[2] > 48 || g_state.scissors[3] > 48)
+        return false;
+    for (uint32_t i = 0; i < g_buffer_count; i++)
+        if (g_buffers[i] && g_state.rt.data == SurfaceOf(g_buffers[i]).data) return true;
+    return false;
+}
+
 HLE_STDCALL(D3DDevice_DrawVertices, 3) {
     std::lock_guard<std::recursive_mutex> lock(g_lock);
+    if (OverscanCorner()) return 0;
     SyncDeferred();
     LatchFog();
     if (!gpu::g_in_splash) gpu::g_splash = false;
@@ -867,6 +880,7 @@ HLE_STDCALL(D3DDevice_DrawVertices, 3) {
 
 HLE_STDCALL(D3DDevice_DrawIndexedVertices, 3) {
     std::lock_guard<std::recursive_mutex> lock(g_lock);
+    if (OverscanCorner()) return 0;
     SyncDeferred();
     LatchFog();
     if (!gpu::g_in_splash) gpu::g_splash = false;
@@ -906,7 +920,7 @@ uint32_t UpVertices(uint32_t src, uint32_t bytes) {
 
 HLE_STDCALL(D3DDevice_DrawVerticesUP, 4) {
     std::lock_guard<std::recursive_mutex> lock(g_lock);
-    if (!g_backend || !a[1] || !a[3]) return 0;
+    if (!g_backend || !a[1] || !a[3] || OverscanCorner()) return 0;
     SyncDeferred();
     LatchFog();
     if (!gpu::g_in_splash) gpu::g_splash = false;
