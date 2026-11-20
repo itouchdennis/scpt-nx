@@ -908,10 +908,10 @@ HLE_STDCALL(D3DDevice_SetPixelShaderConstant, 3) {
 
 // A pass into a back buffer that a scissor keeps to a small corner at its origin: on the console it lands in what the
 // television's overscan hid (Pandora Tomorrow composites its glow chain's 32 x 32 pass there, the scissor of that
-// pass still set, and never reads it back), here it would show as a coloured square
+// pass still set, its thermal vision a 64 x 64 one, and never reads them back), here they would show as squares
 static bool OverscanCorner() {
     if (g_state.scissor_count != 1 || g_state.scissors[0] != 0 || g_state.scissors[1] != 0 ||
-        g_state.scissors[2] > 48 || g_state.scissors[3] > 48)
+        g_state.scissors[2] > 64 || g_state.scissors[3] > 64)
         return false;
     for (uint32_t i = 0; i < g_buffer_count; i++)
         if (g_buffers[i] && g_state.rt.data == SurfaceOf(g_buffers[i]).data) return true;
