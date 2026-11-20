@@ -2056,6 +2056,18 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
         return v;
     }();
     if (std::find(skip_counts.begin(), skip_counts.end(), count) != skip_counts.end()) return;
+    // diagnostic: SCDA_SKIP_RT=hex,... leaves out the draws into these guest colour targets
+    static const std::vector<uint32_t> skip_rts = [] {
+        std::vector<uint32_t> v;
+        if (const char* e = std::getenv("SCDA_SKIP_RT"))
+            for (char* p = const_cast<char*>(e); *p;) {
+                v.push_back(uint32_t(std::strtoul(p, &p, 16)));
+                if (*p == ',') p++;
+                else break;
+            }
+        return v;
+    }();
+    if (std::find(skip_rts.begin(), skip_rts.end(), s.rt.data) != skip_rts.end()) return;
     // diagnostic: SCDA_DRAW_TRACE=n logs every draw of the n-th presented frame, its shaders and inputs
     static const uint64_t trace_frame = [] {
         const char* e = std::getenv("SCDA_DRAW_TRACE");
@@ -2068,10 +2080,29 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
             if (!s.textures[size_t(i)] || !Describe(s.textures[size_t(i)], d)) continue;
             char b[96];
             const auto& t = s.tss[size_t(i)];
-            std::snprintf(b, sizeof(b), " t%d=%s %ux%u op%u(%X,%X)/%u(%X,%X)", i, Format(d.format).name, d.width,
-                          d.height, t[kTssColorOp], t[kTssColorArg1], t[kTssColorArg2], t[kTssAlphaOp],
-                          t[kTssAlphaArg1], t[kTssAlphaArg2]);
+            std::snprintf(b, sizeof(b), " t%d=%s %ux%u@%08X op%u(%X,%X)/%u(%X,%X)", i, Format(d.format).name,
+                          d.width, d.height, d.data, t[kTssColorOp], t[kTssColorArg1], t[kTssColorArg2],
+                          t[kTssAlphaOp], t[kTssAlphaArg1], t[kTssAlphaArg2]);
             tex += b;
+        }
+        if (!sh.prog && !a.pretransformed && (a.regs & 0x1E00) == 0x1E00) {
+            const VertexElement& e = a.elements[0];
+            const VertexBuffer& b = a.buffers[e.buffer];
+            std::string pos;
+            for (uint32_t k = 0; k < 4 && b.src && b.stride && (k + 1) * b.stride <= b.bytes; k++) {
+                float f[3];
+                std::memcpy(f, b.src + k * b.stride + e.offset, 12);
+                char t[64];
+                std::snprintf(t, sizeof(t), " (%g %g %g)", double(f[0]), double(f[1]), double(f[2]));
+                pos += t;
+            }
+            GuestSize gsz;
+            SurfaceSize(s.rt, gsz.w, gsz.h);
+            DrawConstants c{};
+            FillTransformConstants(s, gsz, c);
+            LOGI("trace   quad: format %u, target %ux%u, v0%s, wvp row x %g %g %g %g, row y %g %g %g %g", e.format,
+                 gsz.w, gsz.h, pos.c_str(), double(c.wvp[0]), double(c.wvp[1]), double(c.wvp[2]), double(c.wvp[3]),
+                 double(c.wvp[4]), double(c.wvp[5]), double(c.wvp[6]), double(c.wvp[7]));
         }
         if (s.rs[kRsLighting] && (a.regs >> 3 & 1)) {
             const VertexElement& e = a.elements[3];
@@ -2113,12 +2144,12 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
                  m[13], m[14], s.light_enable, lt.c_str());
         }
         LOGI("trace %llu (%llu): prim %u count %u, %s vs %016llX, ps %s %u combiners %016llX, zfunc %u zwrite %u, blend %u "
-             "%u/%u, cwrite %X, stencil %u, cull %u, regs %04X light %u, rt %08X%s",
+             "%u/%u, cwrite %X, stencil %u, cull %u, regs %04X light %u, vp %u,%u %ux%u, rt %08X%s",
              (unsigned long long)draws_, (unsigned long long)(draws_ - frame_first), prim, count, sh.prog ? "prog" : (a.pretransformed ? "xyzrhw" : "fixed"),
              (unsigned long long)sh.vkey, pk.programmable ? "prog" : "ff", pk.count, (unsigned long long)sh.pkey,
              SimpleState(s, kMZFunc), SimpleState(s, kMZWriteEnable), SimpleState(s, kMBlendEnable), SimpleState(s, kMSrcBlend),
              SimpleState(s, kMDestBlend), SimpleState(s, kMColorWriteEnable), s.rs[kRsStencilEnable], s.rs[kRsCullMode], a.regs,
-             s.rs[kRsLighting], s.rt.data, tex.c_str());
+             s.rs[kRsLighting], s.viewport.x, s.viewport.y, s.viewport.w, s.viewport.h, s.rt.data, tex.c_str());
     }
 
     // everything the draw streams goes in first: a full ring may submit, the render pass begins after
