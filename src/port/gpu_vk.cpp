@@ -2192,9 +2192,38 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
                 std::snprintf(t, sizeof(t), " %08X", v);
                 vals += t;
             }
+            if (a.index_count && a.index_src && b.src && b.stride) {
+                std::string iv;
+                for (uint32_t k = 0; k < 3 && k < a.index_count; k++) {
+                    uint32_t idx = a.index16 ? static_cast<const uint16_t*>(a.index_src)[k]
+                                             : static_cast<const uint32_t*>(a.index_src)[k];
+                    int64_t vtx = int64_t(idx) + a.base_vertex;
+                    uint32_t v = 0;
+                    if (vtx >= 0 && uint64_t(vtx + 1) * b.stride <= b.bytes)
+                        std::memcpy(&v, b.src + size_t(vtx) * b.stride + e.offset, 4);
+                    char t[32];
+                    std::snprintf(t, sizeof(t), " [%lld]%08X", (long long)vtx, v);
+                    iv += t;
+                }
+                LOGI("trace   v3 drawn: base %d indexed%s", a.base_vertex, iv.c_str());
+            }
             LOGI("trace   v3: at %08X format %u buffer %u offset %u stride %u bytes %u values%s",
                  b.src ? uint32_t(b.src - kernel::g_base) : 0u, e.format, e.buffer, e.offset, b.stride, b.bytes,
                  vals.c_str());
+        }
+        if (s.rs[kRsLighting] && (a.regs >> 2 & 1)) {
+            const VertexElement& e = a.elements[2];
+            const VertexBuffer& b = a.buffers[e.buffer];
+            std::string vals;
+            for (uint32_t k = 0; k < 3 && b.src && b.stride && (k + 1) * b.stride <= b.bytes; k++) {
+                uint32_t v;
+                std::memcpy(&v, b.src + k * b.stride + e.offset, 4);
+                char t[16];
+                std::snprintf(t, sizeof(t), " %08X", v);
+                vals += t;
+            }
+            LOGI("trace   v2: format %u decode %X buffer %u offset %u stride %u, first%s, converted %d", e.format,
+                 unsigned(a.decode >> 8 & 0xF), e.buffer, e.offset, b.stride, vals.c_str(), int(!a.vertices.empty()));
         }
         if (s.rs[kRsLighting]) {
             std::string lt;
@@ -2203,8 +2232,11 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
                 const auto& l = s.lights[size_t(i)];
                 float f[4];
                 std::memcpy(f, &l[1], 16);  // diffuse after the type
-                char b[96];
-                std::snprintf(b, sizeof(b), " L%d type %u diffuse %.2f %.2f %.2f", i, l[0], f[0], f[1], f[2]);
+                float q[11];
+                std::memcpy(q, &l[13], sizeof(q));  // position, direction, range, falloff, attenuation 0 1 2
+                char b[200];
+                std::snprintf(b, sizeof(b), " L%d type %u diffuse %.2f %.2f %.2f pos %.0f %.0f %.0f range %.0f att %g %g %g",
+                              i, l[0], f[0], f[1], f[2], q[0], q[1], q[2], q[6], q[8], q[9], q[10]);
                 lt += b;
             }
             float fs, fe, fd;
