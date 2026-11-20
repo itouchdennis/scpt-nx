@@ -1783,6 +1783,9 @@ void VkBackend::ApplyState(const State& s, const Assembled& a) {
     VkBool32 ztest = bound_ds_ && s.rs[kRsZEnable] ? VK_TRUE : VK_FALSE;
     VkBool32 zwrite = ztest && SimpleState(s, kMZWriteEnable) ? VK_TRUE : VK_FALSE;
     VkCompareOp zfunc = ztest ? Cmp(SimpleState(s, kMZFunc)) : VK_COMPARE_OP_ALWAYS;
+    // diagnostic: SCDA_EQUAL_AS_LEQUAL=1 draws EQUAL depth passes with LESS_OR_EQUAL
+    static const bool equal_as_lequal = std::getenv("SCDA_EQUAL_AS_LEQUAL") != nullptr;
+    if (equal_as_lequal && zfunc == VK_COMPARE_OP_EQUAL) zfunc = VK_COMPARE_OP_LESS_OR_EQUAL;
     if (ztest != dyn_.ztest) fn.vkCmdSetDepthTestEnable(c, ztest);
     if (zwrite != dyn_.zwrite || ztest != dyn_.ztest) fn.vkCmdSetDepthWriteEnable(c, zwrite);
     if (zfunc != dyn_.zfunc) fn.vkCmdSetDepthCompareOp(c, zfunc);
@@ -2024,6 +2027,78 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
             skipped_++;
             return;
         }
+    }
+    // diagnostic: SCDA_DRAW_SKIP=a-b leaves out the draws a to b of every frame (counted from 0 in the frame)
+    static uint64_t frame_seen = ~0ull, frame_first = 0;
+    if (presents_ != frame_seen) {
+        frame_seen = presents_;
+        frame_first = draws_;
+    }
+    static const std::pair<uint64_t, uint64_t> skip = [] {
+        const char* e = std::getenv("SCDA_DRAW_SKIP");
+        if (!e) return std::pair<uint64_t, uint64_t>{1, 0};
+        char* end;
+        uint64_t a = std::strtoull(e, &end, 10);
+        uint64_t b = *end == '-' ? std::strtoull(end + 1, nullptr, 10) : a;
+        return std::pair<uint64_t, uint64_t>{a, b};
+    }();
+    if (uint64_t idx = draws_ - frame_first; idx >= skip.first && idx <= skip.second) return;
+    // diagnostic: SCDA_DRAW_TRACE=n logs every draw of the n-th presented frame, its shaders and inputs
+    static const uint64_t trace_frame = [] {
+        const char* e = std::getenv("SCDA_DRAW_TRACE");
+        return e ? std::strtoull(e, nullptr, 10) : 0ull;
+    }();
+    if (trace_frame && presents_ == trace_frame) {
+        std::string tex;
+        for (int i = 0; i < 4; i++) {
+            TextureDesc d;
+            if (!s.textures[size_t(i)] || !Describe(s.textures[size_t(i)], d)) continue;
+            char b[96];
+            const auto& t = s.tss[size_t(i)];
+            std::snprintf(b, sizeof(b), " t%d=%s %ux%u op%u(%X,%X)/%u(%X,%X)", i, Format(d.format).name, d.width,
+                          d.height, t[kTssColorOp], t[kTssColorArg1], t[kTssColorArg2], t[kTssAlphaOp],
+                          t[kTssAlphaArg1], t[kTssAlphaArg2]);
+            tex += b;
+        }
+        if (s.rs[kRsLighting] && (a.regs >> 3 & 1)) {
+            const VertexElement& e = a.elements[3];
+            const VertexBuffer& b = a.buffers[e.buffer];
+            std::string vals;
+            for (uint32_t k = 0; k < 3 && b.src && b.stride && (k + 1) * b.stride <= b.bytes; k++) {
+                uint32_t v;
+                std::memcpy(&v, b.src + k * b.stride + e.offset, 4);
+                char t[16];
+                std::snprintf(t, sizeof(t), " %08X", v);
+                vals += t;
+            }
+            LOGI("trace   v3: format %u buffer %u offset %u stride %u bytes %u values%s", e.format, e.buffer, e.offset,
+                 b.stride, b.bytes, vals.c_str());
+        }
+        if (s.rs[kRsLighting]) {
+            std::string lt;
+            for (int i = 0; i < 8; i++) {
+                if (!(s.light_enable >> i & 1)) continue;
+                const auto& l = s.lights[size_t(i)];
+                float f[4];
+                std::memcpy(f, &l[1], 16);  // diffuse after the type
+                char b[96];
+                std::snprintf(b, sizeof(b), " L%d type %u diffuse %.2f %.2f %.2f", i, l[0], f[0], f[1], f[2]);
+                lt += b;
+            }
+            const auto& m = s.material;
+            LOGI("trace   light: colorvertex %u sources d%u a%u e%u, ambient %08X, material diffuse %.2f %.2f %.2f "
+                 "ambient %.2f %.2f %.2f emissive %.2f %.2f %.2f, lights %02X%s",
+                 s.rs[kRsColorVertex], s.rs[kRsDiffuseMaterialSource], s.rs[kRsAmbientMaterialSource],
+                 s.rs[kRsEmissiveMaterialSource], s.rs[kRsAmbient], m[0], m[1], m[2], m[4], m[5], m[6], m[12],
+                 m[13], m[14], s.light_enable, lt.c_str());
+        }
+        LOGI("trace %llu (%llu): prim %u count %u, %s vs %016llX, ps %s %u combiners %016llX, zfunc %u zwrite %u, blend %u "
+             "%u/%u, stencil %u, cull %u, regs %04X light %u, rt %08X%s",
+             (unsigned long long)draws_, (unsigned long long)(draws_ - frame_first), prim, count, sh.prog ? "prog" : (a.pretransformed ? "xyzrhw" : "fixed"),
+             (unsigned long long)sh.vkey, pk.programmable ? "prog" : "ff", pk.count, (unsigned long long)sh.pkey,
+             SimpleState(s, kMZFunc), SimpleState(s, kMZWriteEnable), SimpleState(s, kMBlendEnable), SimpleState(s, kMSrcBlend),
+             SimpleState(s, kMDestBlend), s.rs[kRsStencilEnable], s.rs[kRsCullMode], a.regs,
+             s.rs[kRsLighting], s.rt.data, tex.c_str());
     }
 
     // everything the draw streams goes in first: a full ring may submit, the render pass begins after
