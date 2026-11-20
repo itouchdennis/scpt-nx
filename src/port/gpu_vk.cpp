@@ -2068,6 +2068,40 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
         return v;
     }();
     if (std::find(skip_rts.begin(), skip_rts.end(), s.rt.data) != skip_rts.end()) return;
+    // diagnostic: SCDA_DUMP_BEFORE=hex pixel key: in the traced frame, every colour target right before the first draw
+    // with that key into dumps/before_<addr>_<w>x<h>.ppm
+    static const uint64_t dump_before = [] {
+        const char* e = std::getenv("SCDA_DUMP_BEFORE");
+        return e ? std::strtoull(e, nullptr, 16) : 0ull;
+    }();
+    if (const char* e = std::getenv("SCDA_DRAW_TRACE");
+        dump_before && sh.pkey == dump_before && e && presents_ == std::strtoull(e, nullptr, 10)) {
+        static bool done = false;
+        if (!done) {
+            done = true;
+            std::filesystem::create_directories("dumps");
+            for (auto& [key, t] : targets_) {
+                std::vector<uint8_t> px;
+                if (t.depth || !ReadTarget(t, px)) continue;
+                char name[64];
+                std::snprintf(name, sizeof(name), "dumps/before_%08X_%ux%u.ppm", t.data, t.gw, t.gh);
+                if (FILE* f = std::fopen(name, "wb")) {
+                    std::fprintf(f, "P6\n%u %u\n255\n", t.gw, t.gh);
+                    for (size_t i = 0; i + 3 < px.size(); i += 4) {
+                        uint8_t rgb[3] = {px[i + 2], px[i + 1], px[i]};
+                        std::fwrite(rgb, 1, 3, f);
+                    }
+                    std::fclose(f);
+                }
+            }
+        }
+    }
+    // diagnostic: SCDA_SKIP_PKEY=hex leaves out the draws with that pixel shader key
+    static const uint64_t skip_pkey = [] {
+        const char* e = std::getenv("SCDA_SKIP_PKEY");
+        return e ? std::strtoull(e, nullptr, 16) : 0ull;
+    }();
+    if (skip_pkey && sh.pkey == skip_pkey) return;
     // diagnostic: SCDA_DRAW_TRACE=n logs every draw of the n-th presented frame, its shaders and inputs
     static const uint64_t trace_frame = [] {
         const char* e = std::getenv("SCDA_DRAW_TRACE");
@@ -2079,22 +2113,65 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
             TextureDesc d;
             if (!s.textures[size_t(i)] || !Describe(s.textures[size_t(i)], d)) continue;
             char b[96];
+            // the texture as the renderer decodes it, once: dumps/tex_<addr>_<w>x<h>.ppm
+            static std::vector<uint32_t> dumped;
+            const FormatInfo& tf = Format(d.format);
+            if (!tf.compressed && !tf.depth && tf.host == Host::BGRA8 &&
+                std::find(dumped.begin(), dumped.end(), d.data) == dumped.end()) {
+                dumped.push_back(d.data);
+                std::vector<uint8_t> px;
+                uint32_t pitch;
+                DecodeLevel(d, 0, 0, static_cast<const uint8_t*>(kernel::HostPtr(d.data)), nullptr, px, pitch);
+                std::filesystem::create_directories("dumps");
+                char name[64];
+                std::snprintf(name, sizeof(name), "dumps/tex_%08X_%ux%u.ppm", d.data, d.width, d.height);
+                if (FILE* f = std::fopen(name, "wb")) {
+                    std::fprintf(f, "P6\n%u %u\n255\n", d.width, d.height);
+                    for (uint32_t y = 0; y < d.height; y++)
+                        for (uint32_t x = 0; x < d.width && size_t(y) * pitch + x * 4 + 3 < px.size(); x++) {
+                            const uint8_t* q = &px[size_t(y) * pitch + x * 4];
+                            uint8_t rgb[3] = {q[2], q[1], q[0]};
+                            std::fwrite(rgb, 1, 3, f);
+                        }
+                    std::fclose(f);
+                }
+            }
             const auto& t = s.tss[size_t(i)];
             std::snprintf(b, sizeof(b), " t%d=%s %ux%u@%08X op%u(%X,%X)/%u(%X,%X)", i, Format(d.format).name,
                           d.width, d.height, d.data, t[kTssColorOp], t[kTssColorArg1], t[kTssColorArg2],
                           t[kTssAlphaOp], t[kTssAlphaArg1], t[kTssAlphaArg2]);
             tex += b;
         }
-        if (!sh.prog && !a.pretransformed && (a.regs & 0x1E00) == 0x1E00) {
+        if (!sh.prog && (a.regs & 0x1E00) == 0x1E00) {
             const VertexElement& e = a.elements[0];
             const VertexBuffer& b = a.buffers[e.buffer];
             std::string pos;
             for (uint32_t k = 0; k < 4 && b.src && b.stride && (k + 1) * b.stride <= b.bytes; k++) {
-                float f[3];
-                std::memcpy(f, b.src + k * b.stride + e.offset, 12);
-                char t[64];
-                std::snprintf(t, sizeof(t), " (%g %g %g)", double(f[0]), double(f[1]), double(f[2]));
+                float f[4];
+                std::memcpy(f, b.src + k * b.stride + e.offset, 16);
+                char t[80];
+                std::snprintf(t, sizeof(t), " (%g %g %g %g)", double(f[0]), double(f[1]), double(f[2]), double(f[3]));
                 pos += t;
+            }
+            for (int r = 9; r <= 12; r++) {
+                const VertexElement& te = a.elements[size_t(r)];
+                const VertexBuffer& tb = a.buffers[te.buffer];
+                if (!tb.src || tb.stride * 3 > tb.bytes) continue;
+                float f0[2], f2[2];
+                std::memcpy(f0, tb.src + te.offset, 8);
+                std::memcpy(f2, tb.src + 2 * tb.stride + te.offset, 8);
+                char t[96];
+                std::snprintf(t, sizeof(t), " v%d fmt %u (%g %g)-(%g %g)", r, te.format, double(f0[0]), double(f0[1]),
+                              double(f2[0]), double(f2[1]));
+                pos += t;
+            }
+            for (int t = 0; t < 4; t++) {
+                const auto& m = s.transforms[16 + size_t(t)];  // D3DTS_TEXTURE0 + t
+                char tt[128];
+                std::snprintf(tt, sizeof(tt), " st%d flags %X index %X tm %g %g / %g %g", t,
+                              s.tss[size_t(t)][kTssTextureTransformFlags], s.tss[size_t(t)][kTssTexCoordIndex],
+                              double(m[0]), double(m[5]), double(m[12]), double(m[13]));
+                pos += tt;
             }
             GuestSize gsz;
             SurfaceSize(s.rt, gsz.w, gsz.h);
@@ -2143,13 +2220,40 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
                  s.rs[kRsEmissiveMaterialSource], s.rs[kRsAmbient], m[0], m[1], m[2], m[4], m[5], m[6], m[12],
                  m[13], m[14], s.light_enable, lt.c_str());
         }
+        if (pk.programmable) {
+            DrawConstants cc{};
+            FillCombinerConstants(s, cc);
+            std::string pcs;
+            for (int k = 0; k < 18; k++) {
+                char t[48];
+                std::snprintf(t, sizeof(t), " c%d=%.2f,%.2f,%.2f,%.2f", k, double(cc.pc[k][0]), double(cc.pc[k][1]),
+                              double(cc.pc[k][2]), double(cc.pc[k][3]));
+                pcs += t;
+            }
+            LOGI("trace   ps constants:%s", pcs.c_str());
+        }
+        {
+            static std::vector<uint64_t> shown;
+            if (std::find(shown.begin(), shown.end(), sh.pkey) == shown.end()) {
+                shown.push_back(sh.pkey);
+                std::filesystem::create_directories("dumps");
+                char name[64];
+                std::snprintf(name, sizeof(name), "dumps/ps_%016llX.hlsl", (unsigned long long)sh.pkey);
+                if (FILE* f = std::fopen(name, "w")) {
+                    std::string h = PixelHlsl(pk);
+                    std::fwrite(h.data(), 1, h.size(), f);
+                    std::fclose(f);
+                }
+            }
+        }
         LOGI("trace %llu (%llu): prim %u count %u, %s vs %016llX, ps %s %u combiners %016llX, zfunc %u zwrite %u, blend %u "
-             "%u/%u, cwrite %X, stencil %u, cull %u, regs %04X light %u, vp %u,%u %ux%u, rt %08X%s",
+             "%u/%u op %X, cwrite %X, stencil %u, cull %u, regs %04X light %u, vp %u,%u %ux%u, scissors %u %d,%d-%d,%d, rt %08X%s",
              (unsigned long long)draws_, (unsigned long long)(draws_ - frame_first), prim, count, sh.prog ? "prog" : (a.pretransformed ? "xyzrhw" : "fixed"),
              (unsigned long long)sh.vkey, pk.programmable ? "prog" : "ff", pk.count, (unsigned long long)sh.pkey,
              SimpleState(s, kMZFunc), SimpleState(s, kMZWriteEnable), SimpleState(s, kMBlendEnable), SimpleState(s, kMSrcBlend),
-             SimpleState(s, kMDestBlend), SimpleState(s, kMColorWriteEnable), s.rs[kRsStencilEnable], s.rs[kRsCullMode], a.regs,
-             s.rs[kRsLighting], s.viewport.x, s.viewport.y, s.viewport.w, s.viewport.h, s.rt.data, tex.c_str());
+             SimpleState(s, kMDestBlend), SimpleState(s, kMBlendOp), SimpleState(s, kMColorWriteEnable), s.rs[kRsStencilEnable], s.rs[kRsCullMode], a.regs,
+             s.rs[kRsLighting], s.viewport.x, s.viewport.y, s.viewport.w, s.viewport.h, s.scissor_count,
+             int(s.scissors[0]), int(s.scissors[1]), int(s.scissors[2]), int(s.scissors[3]), s.rt.data, tex.c_str());
     }
 
     // everything the draw streams goes in first: a full ring may submit, the render pass begins after
@@ -2289,6 +2393,14 @@ void VkBackend::ClearTargets(Target* rt, Target* ds, const State& s, uint32_t co
 void VkBackend::Clear(const State& s, uint32_t count, const uint8_t* rects, uint32_t flags, uint32_t color, float z,
                       uint32_t stencil) {
     auto timed = Time(kClear);
+    if (const char* e = std::getenv("SCDA_DRAW_TRACE"); e && presents_ == std::strtoull(e, nullptr, 10))
+    {
+        TextureDesc rd{};
+        bool have = s.rt.header && Describe(s.rt.header, rd);
+        LOGI("trace clear (%llu draws): rt %08X %s zs %08X flags %X color %08X z %g count %u, vp %u,%u %ux%u",
+             (unsigned long long)draws_, s.rt.data, have ? Format(rd.format).name : "-", s.zs.data, flags, color,
+             double(z), count, s.viewport.x, s.viewport.y, s.viewport.w, s.viewport.h);
+    }
     Target* rt = (flags & kClearTarget) ? EnsureTarget(s.rt, false) : nullptr;
     Target* ds = (flags & (kClearZ | kClearStencil)) ? EnsureTarget(s.zs, true) : nullptr;
     if (rt || ds) ClearTargets(rt, ds, s, count, rects, flags, color, z, stencil);
@@ -2811,6 +2923,31 @@ void VkBackend::Present(const Surface& front, bool pillarbox) {
         auto wait = Time(kSwap);
         WaitSerial(frames_.front());
         frames_.pop_front();
+    }
+    // diagnostic: with SCDA_DRAW_TRACE=n, every colour target at the end of frame n into dumps/<addr>_<w>x<h>.ppm
+    if (const char* e = std::getenv("SCDA_DRAW_TRACE"); e && presents_ == std::strtoull(e, nullptr, 10)) {
+        std::filesystem::create_directories("dumps");
+        for (auto& [key, t] : targets_) {
+            std::vector<uint8_t> px;
+            if (t.depth || !ReadTarget(t, px)) continue;
+            char name[64];
+            std::snprintf(name, sizeof(name), "dumps/%08X_%ux%u.ppm", t.data, t.gw, t.gh);
+            if (FILE* f = std::fopen(name, "wb")) {
+                std::fprintf(f, "P6\n%u %u\n255\n", t.gw, t.gh);
+                for (size_t i = 0; i + 3 < px.size(); i += 4) {
+                    uint8_t rgb[3] = {px[i + 2], px[i + 1], px[i]};
+                    std::fwrite(rgb, 1, 3, f);
+                }
+                std::fclose(f);
+            }
+            std::snprintf(name, sizeof(name), "dumps/%08X_%ux%u_alpha.pgm", t.data, t.gw, t.gh);
+            if (FILE* f = std::fopen(name, "wb")) {
+                std::fprintf(f, "P5\n%u %u\n255\n", t.gw, t.gh);
+                for (size_t i = 3; i < px.size(); i += 4) std::fputc(px[i], f);
+                std::fclose(f);
+            }
+        }
+        LOGI("trace: %zu targets dumped", targets_.size());
     }
     presents_++;
     if (presents_ == 1) port::Breadcrumb("first frame");
