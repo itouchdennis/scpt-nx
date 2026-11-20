@@ -48,7 +48,8 @@ constexpr uint32_t kInitDefaultState = SYM(D3D_InitDefaultState);
 constexpr uint32_t kDevPush = 0x00, kDevThreshold = 0x04, kDevBaseVertex = 0x1C, kDevIndexBuffer = 0x7A0,
                    kDevTextures = 0xF88, kDevRenderTarget = 0x1A04, kDevDepth = 0x1A08, kDevSwapCount = 0x2478,
                    kDevFrameBuffer = 0x1A14, kDevFrameBufferSize = 0x1A18, kDevZScale = 0x948, kDevSuperX = 0x95C,
-                   kDevSuperY = 0x960, kDevVertexShader = 0x794;
+                   kDevSuperY = 0x960, kDevVertexShader = 0x794,
+                   kDevVertexShaderHandle = 0x798, kDevViewport = 0xEE0;
 uint32_t g_empty_vs = 0;
 
 gpu::State g_state;
@@ -214,6 +215,8 @@ using namespace d3d;
 
 // device
 
+static void StoreViewport();
+
 HLE_STDCALL(Direct3D_CreateDevice, 6) {
     std::lock_guard<std::recursive_mutex> lock(g_lock);
     uint32_t pp = a[4];
@@ -266,6 +269,7 @@ HLE_STDCALL(Direct3D_CreateDevice, 6) {
     gpu::MarkVsc(0, 192);
     gpu::g_transform_writes++;
     g_state.viewport = {0, 0, w, h, 0.0f, 1.0f};
+    StoreViewport();
     SetDev(kDevRenderTarget, g_buffers[1]);
     SetDev(kDevDepth, g_depth);
     SetDev(kDevFrameBuffer, g_buffers[1]);
@@ -413,6 +417,7 @@ HLE_STDCALL(D3DDevice_SetRenderTarget, 2) {
     uint32_t w, h;
     gpu::SurfaceSize(g_state.rt, w, h);
     g_state.viewport = {0, 0, w, h, 0.0f, 1.0f};
+    StoreViewport();
     UpdateViewportConstants();
     return 0;
 }
@@ -491,10 +496,22 @@ HLE_STDCALL(D3DDevice_CopyRects, 5) {
     return 0;
 }
 
+// the device's copy of the viewport (D3DVIEWPORT8 at +0xEE0), which the XDK's GetViewport reads (Pandora Tomorrow)
+static void StoreViewport() {
+    const auto& v = g_state.viewport;
+    W32(kDevice + kDevViewport, v.x);
+    W32(kDevice + kDevViewport + 4, v.y);
+    W32(kDevice + kDevViewport + 8, v.w);
+    W32(kDevice + kDevViewport + 12, v.h);
+    std::memcpy(HostPtr(kDevice + kDevViewport + 16), &v.min_z, 4);
+    std::memcpy(HostPtr(kDevice + kDevViewport + 20), &v.max_z, 4);
+}
+
 HLE_STDCALL(D3DDevice_SetViewport, 1) {
     std::lock_guard<std::recursive_mutex> lock(g_lock);
     uint32_t v = a[0];
     g_state.viewport = {R32(v), R32(v + 4), R32(v + 8), R32(v + 12), GF(v + 16), GF(v + 20)};
+    StoreViewport();
     g_state.scissor_count = 0;
     UpdateViewportConstants();
     return 0;
@@ -737,6 +754,7 @@ HLE_STDCALL(D3DDevice_SetVertexShader, 1) {
     std::lock_guard<std::recursive_mutex> lock(g_lock);
     uint32_t h = a[0];
     g_state.vs_handle = h;
+    W32(kDevice + kDevVertexShaderHandle, h);  // what GetVertexShader reads
     g_state.vs = nullptr;
     if (h & 1) {
         auto it = g_vs.find(h);
