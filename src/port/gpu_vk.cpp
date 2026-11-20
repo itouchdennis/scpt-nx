@@ -2043,6 +2043,19 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
         return std::pair<uint64_t, uint64_t>{a, b};
     }();
     if (uint64_t idx = draws_ - frame_first; idx >= skip.first && idx <= skip.second) return;
+    // diagnostic: SCDA_SKIP_COUNT=n,m,... leaves out the draws of n, m, ... vertices (stable between runs, unlike their
+    // place in the frame)
+    static const std::vector<uint32_t> skip_counts = [] {
+        std::vector<uint32_t> v;
+        if (const char* e = std::getenv("SCDA_SKIP_COUNT"))
+            for (char* p = const_cast<char*>(e); *p;) {
+                v.push_back(uint32_t(std::strtoul(p, &p, 10)));
+                if (*p == ',') p++;
+                else break;
+            }
+        return v;
+    }();
+    if (std::find(skip_counts.begin(), skip_counts.end(), count) != skip_counts.end()) return;
     // diagnostic: SCDA_DRAW_TRACE=n logs every draw of the n-th presented frame, its shaders and inputs
     static const uint64_t trace_frame = [] {
         const char* e = std::getenv("SCDA_DRAW_TRACE");
@@ -2071,8 +2084,9 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
                 std::snprintf(t, sizeof(t), " %08X", v);
                 vals += t;
             }
-            LOGI("trace   v3: format %u buffer %u offset %u stride %u bytes %u values%s", e.format, e.buffer, e.offset,
-                 b.stride, b.bytes, vals.c_str());
+            LOGI("trace   v3: at %08X format %u buffer %u offset %u stride %u bytes %u values%s",
+                 b.src ? uint32_t(b.src - kernel::g_base) : 0u, e.format, e.buffer, e.offset, b.stride, b.bytes,
+                 vals.c_str());
         }
         if (s.rs[kRsLighting]) {
             std::string lt;
@@ -2085,6 +2099,12 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
                 std::snprintf(b, sizeof(b), " L%d type %u diffuse %.2f %.2f %.2f", i, l[0], f[0], f[1], f[2]);
                 lt += b;
             }
+            float fs, fe, fd;
+            std::memcpy(&fs, &s.rs[kRsFogStart], 4);
+            std::memcpy(&fe, &s.rs[kRsFogEnd], 4);
+            std::memcpy(&fd, &s.rs[kRsFogDensity], 4);
+            LOGI("trace   fog: enable %u table %u start %g end %g density %g color %08X range %u", s.rs[kRsFogEnable],
+                 s.rs[kRsFogTableMode], double(fs), double(fe), double(fd), s.rs[kRsFogColor], s.rs[kRsFogEnable + 5]);
             const auto& m = s.material;
             LOGI("trace   light: colorvertex %u sources d%u a%u e%u, ambient %08X, material diffuse %.2f %.2f %.2f "
                  "ambient %.2f %.2f %.2f emissive %.2f %.2f %.2f, lights %02X%s",
@@ -2093,11 +2113,11 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
                  m[13], m[14], s.light_enable, lt.c_str());
         }
         LOGI("trace %llu (%llu): prim %u count %u, %s vs %016llX, ps %s %u combiners %016llX, zfunc %u zwrite %u, blend %u "
-             "%u/%u, stencil %u, cull %u, regs %04X light %u, rt %08X%s",
+             "%u/%u, cwrite %X, stencil %u, cull %u, regs %04X light %u, rt %08X%s",
              (unsigned long long)draws_, (unsigned long long)(draws_ - frame_first), prim, count, sh.prog ? "prog" : (a.pretransformed ? "xyzrhw" : "fixed"),
              (unsigned long long)sh.vkey, pk.programmable ? "prog" : "ff", pk.count, (unsigned long long)sh.pkey,
              SimpleState(s, kMZFunc), SimpleState(s, kMZWriteEnable), SimpleState(s, kMBlendEnable), SimpleState(s, kMSrcBlend),
-             SimpleState(s, kMDestBlend), s.rs[kRsStencilEnable], s.rs[kRsCullMode], a.regs,
+             SimpleState(s, kMDestBlend), SimpleState(s, kMColorWriteEnable), s.rs[kRsStencilEnable], s.rs[kRsCullMode], a.regs,
              s.rs[kRsLighting], s.rt.data, tex.c_str());
     }
 
