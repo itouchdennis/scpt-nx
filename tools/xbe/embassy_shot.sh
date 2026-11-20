@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Linux test of a mission view: starts the build under Xvfb :99, presses A three times through the menus with the
-# virtual pad on FIFO $PAD (tools in the session scratchpad), waits for the mission and takes a screenshot.
+# virtual pad on FIFO $PAD (tools/xbe/vpad.py), waits for the mission and takes a screenshot.
 #   embassy_shot.sh OUT.png [ENV=VALUE ...]
 set -u
 out="$1"; shift
