@@ -53,7 +53,8 @@ constexpr uint32_t kHeaderRing = 1u << 20;  // guest memory for header copies; a
 enum class WaitFor : uint8_t { ReadBack, Resource, Fence, Flush, Copy, Frame, Count };
 
 enum class Op : uint8_t {
-    State, Draw, Clear, Copy, Present, Sync, RecordLate, Flush, Gamma, Occlusion, FilterShadows, ApplyShadows
+    State, Draw, Clear, Copy, Present, Sync, RecordLate, Flush, Gamma, Occlusion, FilterShadows, ApplyShadows,
+    Visibility
 };
 
 struct Cmd {
@@ -259,7 +260,8 @@ public:
                 wait_ns_[size_t(WaitFor::Resource)] + wait_ns_[size_t(WaitFor::Copy)]),
              pc(busy_ns_.exchange(0)), pc(present_ns_.exchange(0)));
         static const char* const kOpNames[kOps] = {"state", "draw", "clear", "copy", "present", "sync", "record late",
-                                                   "flush", "gamma", "occlusion", "filter shadows", "apply shadows"};
+                                                   "flush", "gamma", "occlusion", "filter shadows", "apply shadows",
+                                                   "visibility"};
         char line[512];
         int n = 0;
         for (size_t i = 0; i < kOps; i++) {
@@ -330,6 +332,10 @@ public:
         Use(s.rt.header);
         Written(s.rt);
     }
+
+    // a = 0 begin, 1 end with b the report
+    void BeginVisibility() override { cur_->cmds.push_back(Cmd{Op::Visibility, 0}); }
+    void EndVisibility(uint32_t report) override { cur_->cmds.push_back(Cmd{Op::Visibility, 1, report}); }
 
     uint32_t Fence() override { return uint32_t(cur_->id); }
     bool FencePending(uint32_t fence) override { return fence > done_.load(); }
@@ -590,6 +596,10 @@ private:
                 break;
             }
             case Op::ApplyShadows: inner_->ApplyShadows(state_); break;
+            case Op::Visibility:
+                if (c.a) inner_->EndVisibility(c.b);
+                else inner_->BeginVisibility();
+                break;
         }
     }
 
@@ -624,7 +634,7 @@ private:
     Clock::time_point report_t_ = Clock::now();
     std::atomic<uint64_t> busy_ns_{0}, present_ns_{0};
     // each command kind's wall time
-    static constexpr size_t kOps = size_t(Op::ApplyShadows) + 1;
+    static constexpr size_t kOps = size_t(Op::Visibility) + 1;
     std::array<std::atomic<uint64_t>, kOps> op_ns_{};
     // the title's: the transforms' mark (state.h) at the last hand-over; the vertex shader constants' 64 byte pieces
     // skipped and compared, and the transform ranges skipped

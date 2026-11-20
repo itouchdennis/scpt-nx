@@ -295,6 +295,9 @@ public:
     }
     bool DeliverLate(uint32_t data) override;
     void RecordLate(uint32_t data) override;
+    void BeginVisibility() override;
+    void EndVisibility(uint32_t report) override;
+    void PollVisibility();
     void Flush() override {
         if (recorded_) Submit();
     }
@@ -421,6 +424,16 @@ private:
     VkDeviceSize ubo_align_ = 256;
     vk::Buffer readback_;
     float scale_ = 1.0f;  // targets' host size over the console's
+    // visibility tests: occlusion queries, each one's report written when its submission is done
+    static constexpr uint32_t kVisQueries = 256;
+    VkQueryPool vis_pool_ = VK_NULL_HANDLE;
+    uint32_t vis_next_ = 0, vis_query_ = 0;
+    bool vis_active_ = false, vis_split_ = false;
+    struct VisPending {
+        uint32_t query, report;
+        uint64_t serial;
+    };
+    std::vector<VisPending> vis_pending_;
     std::unordered_map<uint64_t, vk::Image> scratch_;  // by width << 32 | height: targets at the console's size
 
     // the open render pass, and what the next draw wants
@@ -672,6 +685,12 @@ uint64_t VkBackend::Submit(VkSemaphore wait, VkSemaphore signal) {
     if (rendering_) {
         fn.vkCmdEndRendering(Cmd());
         rendering_ = false;
+    }
+    if (vis_active_) {
+        // a query lives in one command buffer: one cut by a submission reports the console's "visible"
+        fn.vkCmdEndQuery(Cmd(), vis_pool_, vis_query_);
+        vis_active_ = false;
+        vis_split_ = true;
     }
     Submission& sub = subs_[cur_];
     fn.vkEndCommandBuffer(sub.cmd);
@@ -2818,7 +2837,76 @@ void VkBackend::DrawOverlay(const ImDrawData& d, const UiFrame& f) {
     vin_set_ = false;
 }
 
+void VkBackend::BeginVisibility() {
+    LOG_FIRST(4, "vk: visibility test begun");
+    if (!vis_pool_) {
+        VkQueryPoolCreateInfo qi{VK_STRUCTURE_TYPE_QUERY_POOL_CREATE_INFO};
+        qi.queryType = VK_QUERY_TYPE_OCCLUSION;
+        qi.queryCount = kVisQueries;
+        if (fn.vkCreateQueryPool(dev_.dev, &qi, nullptr, &vis_pool_) != VK_SUCCESS) {
+            vis_pool_ = VK_NULL_HANDLE;
+            return;
+        }
+    }
+    if (vis_active_) {
+        fn.vkCmdEndQuery(Cmd(), vis_pool_, vis_query_);
+        vis_active_ = false;
+    }
+    // queries begin outside a render pass, so the draws' passes may come and go inside one
+    Outside();
+    vis_query_ = vis_next_++ % kVisQueries;
+    fn.vkCmdResetQueryPool(Cmd(), vis_pool_, vis_query_, 1);
+    fn.vkCmdBeginQuery(Cmd(), vis_pool_, vis_query_, dev_.precise_occlusion ? VK_QUERY_CONTROL_PRECISE_BIT : 0);
+    vis_active_ = true;
+    vis_split_ = false;
+}
+
+void VkBackend::EndVisibility(uint32_t report) {
+    LOG_FIRST(4, "vk: visibility test ended into %08X%s", report, vis_active_ ? "" : " (no query)");
+    auto finish = [&](uint32_t pixels) {
+        std::memcpy(kernel::HostPtr(report + 8), &pixels, 4);
+        uint32_t done = 0;
+        std::memcpy(kernel::HostPtr(report + 0xC), &done, 4);
+    };
+    if (!vis_active_) {
+        finish(vis_split_ ? 1000 : 0);
+        vis_split_ = false;
+        return;
+    }
+    Outside();
+    fn.vkCmdEndQuery(Cmd(), vis_pool_, vis_query_);
+    vis_active_ = false;
+    vis_pending_.push_back({vis_query_, report, serial_});
+    PollVisibility();
+}
+
+// the reports whose submissions are done: the passed samples in console pixels
+void VkBackend::PollVisibility() {
+    if (vis_pending_.empty()) return;
+    Poll();
+    float per_pixel = std::max(scale_ * scale_, 1e-6f);
+    for (auto it = vis_pending_.begin(); it != vis_pending_.end();) {
+        if (it->serial > done_) {
+            ++it;
+            continue;
+        }
+        uint64_t samples = 0;
+        if (fn.vkGetQueryPoolResults(dev_.dev, vis_pool_, it->query, 1, sizeof(samples), &samples, sizeof(samples),
+                                     VK_QUERY_RESULT_64_BIT) == VK_NOT_READY) {
+            ++it;
+            continue;
+        }
+        uint32_t pixels = uint32_t(std::min<double>(double(samples) / per_pixel + 0.5, 4294967295.0));
+        LOG_FIRST(40, "vk: visibility test at %08X: %u pixels", it->report, pixels);
+        std::memcpy(kernel::HostPtr(it->report + 8), &pixels, 4);
+        uint32_t done = 0;
+        std::memcpy(kernel::HostPtr(it->report + 0xC), &done, 4);
+        it = vis_pending_.erase(it);
+    }
+}
+
 void VkBackend::Present(const Surface& front, bool pillarbox) {
+    PollVisibility();
     auto timed = Time(kPresent);
     const app::Settings& set = app::Get();
     uint32_t bw, bh;

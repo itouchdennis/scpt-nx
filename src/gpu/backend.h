@@ -49,6 +49,10 @@ public:
     // depth with view z = p[0] / (ndc depth - p[1]); ApplyShadows, after the game's own edge blur, writes it back
     virtual void FilterShadows(const State&, const float /*p*/[kShadowFilterParams]) {}
     virtual void ApplyShadows(const State&) {}
+    // the XDK's visibility tests: the pixels the draws between Begin and End pass, written to the report the title's
+    // EndVisibilityTest made (+8 the count, +0xC zero once done, as the console's GPU writes it) when the GPU has them
+    virtual void BeginVisibility() {}
+    virtual void EndVisibility(uint32_t /*report_va*/) {}
 
     // the XDK's fences and busy checks against the render thread; a backend that draws at once is never behind
     virtual uint32_t Fence() { return ++fence_; }

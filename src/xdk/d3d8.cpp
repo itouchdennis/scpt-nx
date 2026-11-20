@@ -663,6 +663,26 @@ HLE_STDCALL(D3DDevice_SetMaterial, 1) {
     return 0;
 }
 
+// visibility tests (Pandora Tomorrow's lights and sun glare): the renderer counts the pixels between Begin and End
+// and writes them to the report the XDK's EndVisibilityTest makes, which GetVisibilityTestResult, the XDK's own,
+// reads. Without them every test stayed incomplete and lights flickered with whatever the title made of that.
+HLE_STDCALL(D3DDevice_BeginVisibilityTest, 0) {
+    std::lock_guard<std::recursive_mutex> lock(g_lock);
+    if (g_backend) g_backend->BeginVisibility();
+    return 0;
+}
+
+X86_EXTERN_FUNC(GUEST_ORIG(D3DDevice_EndVisibilityTest));
+X86_FUNC(GUEST(D3DDevice_EndVisibilityTest)) {
+    uint32_t index = R32(ctx.esp + 4);
+    GUEST_ORIG(D3DDevice_EndVisibilityTest)(ctx, base);  // makes the report, marks it pending (+0xC all ones)
+    if (ctx.eax) return;
+    uint32_t page = Dev(0x7D4 + (index >> 8) * 4);
+    if (!page) return;
+    std::lock_guard<std::recursive_mutex> lock(g_lock);
+    if (g_backend) g_backend->EndVisibility(page + (index & 0xFF) * 16);
+}
+
 // the XDK keeps its own light lists, the renderer gets a copy
 X86_EXTERN_FUNC(GUEST_ORIG(D3DDevice_SetLight));
 X86_FUNC(GUEST(D3DDevice_SetLight)) {

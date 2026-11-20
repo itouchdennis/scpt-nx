@@ -189,6 +189,8 @@ bool Device::CreateDevice() {
     on.pNext = &v13_on;
     on.features.samplerAnisotropy = have.features.samplerAnisotropy;
     on.features.fillModeNonSolid = have.features.fillModeNonSolid;
+    on.features.occlusionQueryPrecise = have.features.occlusionQueryPrecise;  // visibility tests count pixels
+    precise_occlusion = have.features.occlusionQueryPrecise;
     on.features.textureCompressionBC = have.features.textureCompressionBC;
     if (!have.features.textureCompressionBC) LOGW("vk: %s has no DXT textures", props.deviceName);
     max_anisotropy = have.features.samplerAnisotropy ? props.limits.maxSamplerAnisotropy : 1.0f;

@@ -64,6 +64,12 @@ namespace gpu::vk {
     X(vkWaitForFences)                                                                                                \
     X(vkResetFences)                                                                                                  \
     X(vkGetFenceStatus)                                                                                               \
+    X(vkCreateQueryPool)                                                                                              \
+    X(vkDestroyQueryPool)                                                                                             \
+    X(vkCmdResetQueryPool)                                                                                            \
+    X(vkCmdBeginQuery)                                                                                                \
+    X(vkCmdEndQuery)                                                                                                  \
+    X(vkGetQueryPoolResults)                                                                                          \
     X(vkCreateSemaphore)                                                                                              \
     X(vkDestroySemaphore)                                                                                             \
     X(vkCmdPipelineBarrier)                                                                                           \
@@ -168,6 +174,7 @@ public:
     VkFormat depth_format = VK_FORMAT_UNDEFINED;  // D24S8 where the GPU has it, else D32S8
     bool custom_border = false;                   // VK_EXT_custom_border_color: any border colour, not just three
     float max_anisotropy = 1;
+    bool precise_occlusion = false;  // occlusion queries count samples, not just any
 
     // the swap chain, made again by Resize; false while the window has no size
     VkSurfaceKHR surface = VK_NULL_HANDLE;
