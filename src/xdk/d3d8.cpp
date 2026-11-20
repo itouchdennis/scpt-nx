@@ -285,6 +285,11 @@ HLE_STDCALL(Direct3D_CreateDevice, 6) {
     StoreViewport();
     SetDev(kDevRenderTarget, g_buffers[1]);
     SetDev(kDevDepth, g_depth);
+    // the device holds its targets as the XDK's own SetRenderTarget does: a later SetRenderTarget releases them
+    // (Pandora Tomorrow's thermal vision: without these internal references the back buffer's count went below
+    // zero and the XDK handed host memory to the title's allocator to free)
+    AddRef(g_buffers[1]);
+    AddRef(g_depth);
     SetDev(kDevFrameBuffer, g_buffers[1]);
     SetDev(kDevFrameBufferSize, g_buffers[1]);
     float one = 1.0f, zs = g_depth && (R32(g_depth + 12) >> 8 & 0xFF) == 0x30 ? 65535.0f : 16777215.0f;
@@ -419,6 +424,8 @@ HLE_STDCALL(D3DDevice_SetRenderTarget, 2) {
     uint32_t rt = a[0] ? a[0] : Dev(kDevRenderTarget), zs = a[1];
     AddRef(rt);
     uint32_t old_rt = Dev(kDevRenderTarget), old_zs = Dev(kDevDepth);
+    LOG_FIRST(0, "d3d: SetRenderTarget %08X (%08X) %08X (%08X), old %08X (%08X) %08X (%08X)", rt, rt ? R32(rt) : 0,
+              zs, zs ? R32(zs) : 0, old_rt, old_rt ? R32(old_rt) : 0, old_zs, old_zs ? R32(old_zs) : 0);
     SetDev(kDevRenderTarget, rt);
     SetDev(kDevDepth, zs);
     AddRef(zs);
@@ -435,22 +442,32 @@ HLE_STDCALL(D3DDevice_SetRenderTarget, 2) {
     return 0;
 }
 
+// D3DResource_AddRef as the XDK does it: a surface's first reference also takes one on the texture it belongs to
+// (+0x14), which its last Release gives back. Without that a texture's surface handed out by a getter and released
+// cost the texture a reference it never had: Pandora Tomorrow's thermal vision freed one twice
+static void ExternalAddRef(uint32_t res) {
+    if (!res) return;
+    uint32_t common = R32(res);
+    if (!(common & 0xFFFF) && (common & 0x70000) == 0x50000) ExternalAddRef(R32(res + 0x14));
+    W32(res, common + 1);
+}
+
 HLE_STDCALL(D3DDevice_GetBackBuffer2, 1) {
     int32_t i = int32_t(a[0]);
     uint32_t s = i < 0 ? g_buffers[0] : g_buffers[std::min<uint32_t>(uint32_t(i) + 1, g_buffer_count - 1)];
-    W32(s, R32(s) + 1);
+    ExternalAddRef(s);
     return s;
 }
 
 HLE_STDCALL(D3DDevice_GetRenderTarget2, 0) {
     uint32_t s = Dev(kDevRenderTarget);
-    if (s) W32(s, R32(s) + 1);
+    ExternalAddRef(s);
     return s;
 }
 
 HLE_STDCALL(D3DDevice_GetDepthStencilSurface2, 0) {
     uint32_t s = Dev(kDevDepth);
-    if (s) W32(s, R32(s) + 1);
+    ExternalAddRef(s);
     return s;
 }
 
