@@ -1859,9 +1859,12 @@ void VkBackend::ApplyState(const State& s, const Assembled& a) {
     VkBool32 ztest = bound_ds_ && s.rs[kRsZEnable] ? VK_TRUE : VK_FALSE;
     VkBool32 zwrite = ztest && SimpleState(s, kMZWriteEnable) ? VK_TRUE : VK_FALSE;
     VkCompareOp zfunc = ztest ? Cmp(SimpleState(s, kMZFunc)) : VK_COMPARE_OP_ALWAYS;
-    // diagnostic: SCDA_EQUAL_AS_LEQUAL=1 draws EQUAL depth passes with LESS_OR_EQUAL
-    static const bool equal_as_lequal = std::getenv("SCDA_EQUAL_AS_LEQUAL") != nullptr;
-    if (equal_as_lequal && zfunc == VK_COMPARE_OP_EQUAL) zfunc = VK_COMPARE_OP_LESS_OR_EQUAL;
+    // EQUAL with depth writes off is a later pass over what is drawn already. Pandora Tomorrow lights its walls so:
+    // the base pass by the fixed function transform, the light passes by vertex programs. The console runs both on
+    // one vertex unit and meets the depth exactly; here the two round apart, and the lights came and went with the
+    // view. Such passes test LESS_OR_EQUAL, pulled kEqualSlack depth units closer (below).
+    bool equal_pass = zfunc == VK_COMPARE_OP_EQUAL && !zwrite && a.topology == Topology::Triangles;
+    if (equal_pass) zfunc = VK_COMPARE_OP_LESS_OR_EQUAL;
     if (ztest != dyn_.ztest) fn.vkCmdSetDepthTestEnable(c, ztest);
     if (zwrite != dyn_.zwrite || ztest != dyn_.ztest) fn.vkCmdSetDepthWriteEnable(c, zwrite);
     if (zfunc != dyn_.zfunc) fn.vkCmdSetDepthCompareOp(c, zfunc);
@@ -1892,13 +1895,16 @@ void VkBackend::ApplyState(const State& s, const Assembled& a) {
     dyn_.smask = smask;
     dyn_.swrite = swrite;
     // depth bias in depth buffer units, as for the console's 24 bit buffer
-    VkBool32 bias = bound_ds_ && a.topology == Topology::Triangles && SimpleState(s, kMSolidOffsetEnable);
+    bool offset = bound_ds_ && a.topology == Topology::Triangles && SimpleState(s, kMSolidOffsetEnable);
+    VkBool32 bias = offset || equal_pass;
     if (bias != dyn_.bias) {
         fn.vkCmdSetDepthBiasEnable(c, bias);
         dyn_.bias = bias;
     }
-    float bconst = bias ? float(std::lround(Bits(SimpleState(s, kMDepthOffset)) * kDepth24Max / s.zscale)) : 0;
-    float bslope = bias ? Bits(SimpleState(s, kMSlopeScale)) : 0;
+    constexpr float kEqualSlack = 16.0f;  // depth units of 2^-24: a few times the two transforms' difference
+    float bconst = offset ? float(std::lround(Bits(SimpleState(s, kMDepthOffset)) * kDepth24Max / s.zscale)) : 0;
+    if (equal_pass) bconst -= kEqualSlack;
+    float bslope = offset ? Bits(SimpleState(s, kMSlopeScale)) : 0;
     if (bconst != dyn_.bias_const || bslope != dyn_.bias_slope) {
         fn.vkCmdSetDepthBias(c, bconst, 0.0f, bslope);
         dyn_.bias_const = bconst;
@@ -3212,7 +3218,10 @@ void VkBackend::Present(const Surface& front, bool pillarbox) {
     presents_++;
     frame_wait_ns_ = 0;
     if (gpu::g_trace_request.exchange(false)) {
+        // the frame traced before keeps its dumps in dumps-<frame>
         std::error_code ec;
+        if (uint64_t before = g_trace_frame; before && std::filesystem::exists("dumps"))
+            std::filesystem::rename("dumps", "dumps-" + std::to_string(before), ec);
         std::filesystem::remove_all("dumps", ec);
         g_trace_frame = presents_;
         LOGI("trace: frame %llu on request", (unsigned long long)presents_);
