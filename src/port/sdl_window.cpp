@@ -13,6 +13,10 @@
 #include <chrono>
 #include <mutex>
 #include <thread>
+#include <vector>
+
+#include <fcntl.h>
+#include <unistd.h>
 
 #include "app/app.h"
 #include "audio/output.h"
@@ -214,11 +218,29 @@ void ApplyNow() {
     app::g_display_applied++;
 }
 
+// diagnostic: F11 writes the title's memory to guest_<va>.bin in the working directory (user range and the
+// contiguous one), unmapped pages as zeros
+void DumpGuestMemory() {
+    constexpr uint32_t kPage = 0x10000;
+    static const std::vector<uint8_t> zero(kPage, 0);
+    for (auto [from, to] : {std::pair<uint32_t, uint32_t>{0x00000000u, 0x08000000u}, {0x80000000u, 0x84000000u}}) {
+        char name[64];
+        std::snprintf(name, sizeof(name), "guest_%08X.bin", from);
+        int fd = ::open(name, O_WRONLY | O_CREAT | O_TRUNC, 0644);
+        if (fd < 0) continue;
+        for (uint32_t va = from; va < to; va += kPage)
+            if (::write(fd, kernel::g_base + va, kPage) != ssize_t(kPage)) (void)!::write(fd, zero.data(), kPage);
+        ::close(fd);
+    }
+    LOGI("debug: guest memory dumped");
+}
+
 void HandleEvent(const SDL_Event& e) {
     switch (e.type) {
         case SDL_QUIT: g_quit = true; break;
         case SDL_KEYDOWN:
             if (e.key.keysym.scancode == SDL_SCANCODE_F9 && !e.key.repeat) gpu::g_trace_request = true;
+            if (e.key.keysym.scancode == SDL_SCANCODE_F11 && !e.key.repeat) DumpGuestMemory();
             port::OverlayKey(e.key.keysym.scancode, true);
             OnKey(e.key);
             break;
