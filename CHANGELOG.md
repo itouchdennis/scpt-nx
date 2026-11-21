@@ -5,6 +5,12 @@ yourself, from your own copy of the game ([docs/HOW_TO_BUILD.md](docs/HOW_TO_BUI
 scpt-nx starts from [scct-nx](https://github.com/itouchdennis/scct-nx) v0.3.0, which starts from
 [scpt-nx](https://github.com/itouchdennis/scpt-nx) v0.4.9; their changelogs have the history of the shared code. The
 entries below v0.3.4 are scct-nx's.
+## v0.3.5
+
+### Changed
+- Rename project references from scda to scpt.
+- Update builder image references to scpt-nx-builder.
+- Align GitHub Actions workflows with the scpt-nx project.
 
 ## v0.3.4
 The first release of Pandora Tomorrow's campaign (`Offline.xbe`, XDK 1.0.5788) on Linux and the Switch, into the first mission.
