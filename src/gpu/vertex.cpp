@@ -466,4 +466,27 @@ bool Assemble(const State& s, uint32_t prim, uint32_t start, uint32_t count, con
     return AssembleConverted(s, inputs, d, out);
 }
 
+void LatchAttributes(State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* ip) {
+    using namespace kernel;
+    if (!count || prim < 1 || prim > 10) return;
+    VertexShader fvf_layout;
+    const VertexShader* layout = PickLayout(s, fvf_layout);
+    if (!layout) return;
+    DrawRange d;
+    d.start = start;
+    d.count = count;
+    d.ip = ip;
+    uint32_t last = DrawVertex(s, d, count - 1);
+    for (int r = 0; r < 16; r++) {
+        const auto& in = layout->inputs[size_t(r)];
+        if (in.stream < 0 || !in.type || in.type == kTypeNone) continue;
+        const auto& st = s.streams[size_t(in.stream)];
+        if (!st.vb) continue;
+        uint32_t data = mem::VirtualFromPhysical(R32(st.vb + kResData));
+        if (!data) continue;
+        const uint8_t* p = static_cast<const uint8_t*>(HostPtr(data + in.offset));
+        Convert(in.type, p + size_t(last) * StrideOf(s, *layout, in), s.attr[size_t(r)].data());
+    }
+}
+
 }  // namespace gpu

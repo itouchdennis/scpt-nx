@@ -52,6 +52,7 @@ cbuffer DC : register(b1) {
     float4 mat[5];
     float4 amb;
     float4 lt[56];
+    float4 attr[16];
 };
 )";
 
@@ -116,7 +117,7 @@ std::string Src(const Tok& k, int which, uint16_t regs) {
         base = reg == 12 ? "oPos" : F("R%u", reg);
     } else if (mux == 2) {
         uint32_t v = k.f(1, 9, 4);
-        base = (regs >> v) & 1 ? F("i.v%u", v) : (v == 3 ? "float4(1,1,1,1)" : "float4(0,0,0,1)");
+        base = (regs >> v) & 1 ? F("i.v%u", v) : F("attr[%u]", v);
     } else {
         uint32_t cr = k.f(1, 13, 8);
         base = k.f(3, 1, 1) ? F("c[clamp(a0 + %u, 0, 191)]", cr) : F("c[%u]", cr);
@@ -665,7 +666,7 @@ std::string FixedVertexHlsl(uint16_t regs, bool pretransformed, uint64_t decode,
     s += kVsHelpers;
     s += VsInputs(regs, decode);
     s += kVsPrologue;
-    auto v = [&](int r, const char* def) { return (regs >> r) & 1 ? F("i.v%d", r) : std::string(def); };
+    auto v = [&](int r, const char*) { return (regs >> r) & 1 ? F("i.v%d", r) : F("attr[%d]", r); };
     bool lit = !pretransformed && (f.light & 1);
     if (pretransformed) {
         s += "    float4 rhw = " + v(0, "float4(0,0,0,1)") + ";\n";
@@ -834,7 +835,10 @@ std::string PixelHlsl(const PixelKey& k) {
             else if (t.kind == kTexCube && (t.flags & kTexNormCube))
                 body += F("float4 t%d = float4(normalize(pT%d.xyz) * 0.5 + 0.5, tex%d.Sample(smp%d, pT%d.xyz).a);\n", i, i, i, i, i);
             else if (t.kind) body += F("float4 t%d = tex%d.Sample(smp%d, pT%d.xyz);\n", i, i, i, i);
-            else body += F("float4 t%d = float4(1,1,1,1);\n", i);
+            // no texture: the XDK sets the stage's texture mode to none (0x342650 in Pandora Tomorrow), which reads
+            // as black, as in the programmable path; Pandora Tomorrow's shore leaves the water's stage 1 blend on
+            // after it and would turn white
+            else body += F("float4 t%d = float4(0,0,0,1);\n", i);
             if ((t.flags & (kTexHdr | kTexWide)) == kTexHdr) body += F("t%d.rgb = saturate(t%d.rgb * hdr.y);\n", i, i);
             if ((k.alphakill >> i) & 1) body += F("if (t%d.a == 0) discard;\n", i);
             const char* dst = f[8] == 5 ? "tmp" : "cur";

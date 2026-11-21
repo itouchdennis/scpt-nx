@@ -13,6 +13,7 @@
 #endif
 
 #include <algorithm>
+#include <bit>
 #include <atomic>
 #include <chrono>
 #include <unordered_map>
@@ -20,6 +21,7 @@
 #include "app/app.h"
 #include "gpu/backend.h"
 #include "gpu/texture.h"
+#include "gpu/vertex.h"
 #include "xdk/d3d8.h"
 #include "xdk/hle.h"
 
@@ -945,6 +947,7 @@ HLE_STDCALL(D3DDevice_DrawVertices, 3) {
     LatchFog();
     if (!gpu::g_in_splash) gpu::g_splash = false;
     if (g_backend) g_backend->Draw(g_state, a[0], a[1], a[2], nullptr);
+    gpu::LatchAttributes(g_state, a[0], a[1], a[2], nullptr);
     return 0;
 }
 
@@ -956,6 +959,7 @@ HLE_STDCALL(D3DDevice_DrawIndexedVertices, 3) {
     if (!gpu::g_in_splash) gpu::g_splash = false;
     const uint8_t* indices = a[2] ? static_cast<const uint8_t*>(HostPtr(a[2])) : nullptr;
     if (g_backend) g_backend->Draw(g_state, a[0], 0, a[1], indices);
+    gpu::LatchAttributes(g_state, a[0], 0, a[1], indices);
     return 0;
 }
 
@@ -997,7 +1001,27 @@ HLE_STDCALL(D3DDevice_DrawVerticesUP, 4) {
     auto stream = g_state.streams[0];
     g_state.streams[0] = {UpVertices(a[2], a[1] * a[3]), a[3]};
     g_backend->Draw(g_state, a[0], 0, a[1], nullptr);
+    gpu::LatchAttributes(g_state, a[0], 0, a[1], nullptr);
     g_state.streams[0] = stream;
+    return 0;
+}
+
+// SetVertexData4f/2f(register, ...): the value a register no stream feeds reads from now on (State::attr). Register
+// -1, an immediate mode vertex, is Begin/End's, which no title here draws with.
+HLE_STDCALL(D3DDevice_SetVertexData4f, 5) {
+    std::lock_guard<std::recursive_mutex> lock(g_lock);
+    if (a[0] < 16)
+        for (uint32_t i = 0; i < 4; i++) g_state.attr[a[0]][i] = std::bit_cast<float>(uint32_t(a[1 + i]));
+    return 0;
+}
+HLE_STDCALL(D3DDevice_SetVertexData2f, 3) {
+    std::lock_guard<std::recursive_mutex> lock(g_lock);
+    if (a[0] < 16) {
+        g_state.attr[a[0]][0] = std::bit_cast<float>(uint32_t(a[1]));
+        g_state.attr[a[0]][1] = std::bit_cast<float>(uint32_t(a[2]));
+        g_state.attr[a[0]][2] = 0;
+        g_state.attr[a[0]][3] = 1;
+    }
     return 0;
 }
 

@@ -180,6 +180,16 @@ struct State {
     uint32_t light_enable = 0;                         // bit per light
     float ss_offset_x = 0, ss_offset_y = 0;
     float zscale = 16777215.0f;  // depth buffer units per 1.0
+    // what a vertex register no stream feeds reads: the console keeps the value the last vertex drawn with that
+    // register had, or the one SetVertexData gave it (Pandora Tomorrow's shore meshes have no colours and take the
+    // foam's before them; white made them glare)
+    std::array<std::array<float, 4>, 16> attr = [] {
+        std::array<std::array<float, 4>, 16> v{};
+        for (auto& r : v) r = {0, 0, 0, 1};
+        v[3] = {1, 1, 1, 1};
+        v[4] = {0, 0, 0, 0};
+        return v;
+    }();
 };
 
 // Every write to the title's State::vsc and to its transforms is marked (xdk/d3d8.cpp, game/hud.cpp), so the threaded

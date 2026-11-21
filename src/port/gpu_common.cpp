@@ -118,6 +118,7 @@ void FillSurfaceConstants(const State& s, GuestSize size, DrawConstants& c) {
     c.misc[1] = SimpleState(s, kMAlphaTestEnable) ? float(CmpIndex(SimpleState(s, kMAlphaFunc))) : 7.0f;
     c.misc[2] = float(CmpIndex(s.rs[kRsShadowFunc]));
     c.misc[3] = s.rs[kRsSpecularEnable] ? 1.0f : 0.0f;
+    std::memcpy(c.attr, s.attr.data(), sizeof(c.attr));
 }
 
 void FillCombinerConstants(const State& s, DrawConstants& c) {

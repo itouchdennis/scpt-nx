@@ -59,4 +59,7 @@ void FvfInputs(uint32_t fvf, VertexShader& out);
 // indices: the title's 16 bit indices, null for an unindexed draw
 bool Assemble(const State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* indices, Assembled& out);
 
+// after a draw: the registers its streams fed keep its last vertex's values in s.attr, as the console's do
+void LatchAttributes(State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* indices);
+
 }  // namespace gpu
