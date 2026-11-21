@@ -221,15 +221,17 @@ void ApplyNow() {
 // diagnostic: F11 writes the title's memory to guest_<va>.bin in the working directory (user range and the
 // contiguous one), unmapped pages as zeros
 void DumpGuestMemory() {
-    constexpr uint32_t kPage = 0x10000;
+    constexpr uint32_t kPage = 0x1000;
     static const std::vector<uint8_t> zero(kPage, 0);
     for (auto [from, to] : {std::pair<uint32_t, uint32_t>{0x00000000u, 0x08000000u}, {0x80000000u, 0x84000000u}}) {
         char name[64];
         std::snprintf(name, sizeof(name), "guest_%08X.bin", from);
         int fd = ::open(name, O_WRONLY | O_CREAT | O_TRUNC, 0644);
         if (fd < 0) continue;
+        // each page at its own offset: a write from an unmapped page fails, the page stays zeros
         for (uint32_t va = from; va < to; va += kPage)
-            if (::write(fd, kernel::g_base + va, kPage) != ssize_t(kPage)) (void)!::write(fd, zero.data(), kPage);
+            if (::pwrite(fd, kernel::g_base + va, kPage, off_t(va - from)) != ssize_t(kPage))
+                (void)!::pwrite(fd, zero.data(), kPage, off_t(va - from));
         ::close(fd);
     }
     LOGI("debug: guest memory dumped");
