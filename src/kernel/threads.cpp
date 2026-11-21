@@ -178,6 +178,7 @@ void StartThread(ThreadRef t) {
             si = g_start[t.get()];
             g_start.erase(t.get());
         }
+        t->start_routine = si.start_routine;
         LOGI("thread %X starts at %08X (%08X, %08X)", t->id, si.system_routine ? si.system_routine : si.start_routine,
              si.start_routine, si.start_context);
         uint32_t code;

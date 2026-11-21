@@ -741,6 +741,21 @@ KERNEL_EXPORT(219, NtReadFile, 8) {
         s.reads++;
         s.read_bytes += n;
     });
+    // diagnostic: SCDA_TRACE_FILE=part of a name logs every read of the files whose title path holds it
+    static const char* trace = std::getenv("SCDA_TRACE_FILE");
+    if (trace && f->xbox.find(trace) != std::string::npos) {
+        std::string calls;
+        for (uint32_t i = 0; i < 48; i++) {
+            uint32_t w = R32(ctx.esp + i * 4);
+            if (w >= 0x11000 && w < 0x330000) calls += " " + std::to_string(i) + ":" + [&] {
+                char b[12];
+                std::snprintf(b, sizeof(b), "%X", w);
+                return std::string(b);
+            }();
+        }
+        LOGI("read %s at %llu: %zu of %u bytes into %08X, event %X apc %X, stack%s", f->xbox.c_str(),
+             (unsigned long long)pos, n, len, buf, event, apc, calls.c_str());
+    }
     if (n < len && !f->entry) LOG_FIRST(32, "NtReadFile: %s at %llu: %zu of %u bytes", f->host.string().c_str(),
                                          (unsigned long long)pos, n, len);
     if (len && !n) {

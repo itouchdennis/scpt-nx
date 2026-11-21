@@ -10,6 +10,7 @@
 #include "kernel/crypto.h"
 #include "kernel/exports.h"
 #include "xbe/xbe.h"
+#include "xdk/hle.h"
 
 namespace kernel {
 
@@ -235,6 +236,13 @@ KERNEL_EXPORT(99, KeDelayExecutionThread, 3) {
     bool alertable = a[1] & 0xFF;
     Thread* t = Current();
     if (alertable && t && RunApcs(*t)) return kUserApc;
+    // Pandora Tomorrow's sound stream thread Sleep(1)s between rounds and counts every round as 10 ms of sound to
+    // decode ahead: on the single core console the game's other threads held it off about that long. Here each round
+    // took 1 ms and the streams (speech, music, ambience) ran several times too fast, the speech in snatches.
+    constexpr int64_t kStreamRound = 10 * 10000;  // 100 ns units
+    if (HAS_Sound_StreamThread && interval < 0 && -interval < kStreamRound && t &&
+        t->start_routine == SYM(Sound_StreamThread))
+        interval = -kStreamRound;
     int64_t deadline = ToDeadline(interval);
     auto now = [] {
         return std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::steady_clock::now().time_since_epoch()).count();

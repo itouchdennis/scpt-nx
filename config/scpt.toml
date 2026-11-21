@@ -237,6 +237,8 @@ XOnlineStartup                                       = 0x320997
 [data]
 # minimum frame time the engine sleeps out, zeroed at boot in Double Agent: not found in this image yet, 0 turns it off
 Engine_FrameTimeMin         = 0
+# the sound stream thread's function: its short sleeps last 10 ms, a round of its decode-ahead (Pandora Tomorrow)
+Sound_StreamThread          = 0x2239F0
 D3D_DeferredTextureState    = 0x348A40
 D3D_Device                  = 0x348EE0
 D3D_DirtyFlags              = 0x348A38

@@ -156,6 +156,7 @@ struct Thread : Object {
     uint32_t kpcr = 0, ethread = 0, stack_top = 0, stack_size = 0, tls = 0;
     uint32_t exit_code = 0;
     int priority = 0;
+    uint32_t start_routine = 0;  // the title's thread function
     std::atomic<int> suspend{0};
     std::mutex apc_lock;
     std::deque<std::array<uint32_t, 4>> apcs;  // routine, arg1, arg2, arg3

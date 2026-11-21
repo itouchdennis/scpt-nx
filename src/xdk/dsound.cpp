@@ -1024,13 +1024,23 @@ HLE_STDCALL(IDirectSound_DownloadEffectsImage, 5) {
 HLE_STDCALL(DirectSoundCreateBuffer, 2) { return NewBuffer(a[0], a[1]); }
 HLE_STDCALL(IDirectSound_CreateSoundBuffer, 4) { return NewBuffer(a[1], a[2]); }
 
-#define BUFFER(name, nargs)                                 \
-    static uint32_t buf_##name(Voice& v, const Args& a);    \
-    HLE_STDCALL(IDirectSoundBuffer_##name, nargs) {         \
-        std::lock_guard<std::recursive_mutex> lock(g_lock); \
-        Voice* v = Find(a[0]);                              \
-        return v ? buf_##name(*v, a) : 0x80004005u;         \
-    }                                                       \
+// diagnostic: SCDA_DSOUND_TRACE=1 logs every buffer call but the volume and placement ones, with the voice's state
+inline const bool g_dsound_trace = std::getenv("SCDA_DSOUND_TRACE") != nullptr;
+#define BUFFER(name, nargs)                                                                                    \
+    static uint32_t buf_##name(Voice& v, const Args& a);                                                       \
+    HLE_STDCALL(IDirectSoundBuffer_##name, nargs) {                                                            \
+        std::lock_guard<std::recursive_mutex> lock(g_lock);                                                    \
+        Voice* v = Find(a[0]);                                                                                 \
+        uint32_t r = v ? buf_##name(*v, a) : 0x80004005u;                                                      \
+        if (g_dsound_trace && v && !std::strstr("SetVolume SetPosition SetMixBinVolumes SetHeadroom SetFilter " \
+                                                "SetMaxDistance SetMinDistance SetVelocity SetI3DL2Source",     \
+                                                #name))                                                        \
+            LOGI("dsb %08X %s(%X %X %X %X) -> %X: %u Hz %u ch tag %u, %u bytes data %08X, pos %u, %s%s", a[0], #name, \
+                 nargs > 1 ? uint32_t(a[1]) : 0u, nargs > 2 ? uint32_t(a[2]) : 0u, nargs > 3 ? uint32_t(a[3]) : 0u, \
+                 nargs > 4 ? uint32_t(a[4]) : 0u, r, v->freq ? v->freq : v->rate, v->channels, unsigned(v->tag), \
+                 v->bytes, v->data, uint32_t(v->pos), v->playing ? "playing" : "stopped", v->looping ? " looping" : ""); \
+        return r;                                                                                              \
+    }                                                                                                          \
     static uint32_t buf_##name([[maybe_unused]] Voice& v, [[maybe_unused]] const Args& a)
 
 BUFFER(Release, 1) {

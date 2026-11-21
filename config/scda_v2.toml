@@ -236,6 +236,8 @@ XOnlineStartup                                       = 0x478F54
 [data]
 # minimum frame time the engine sleeps out (float seconds), zeroed at boot; the fps cap paces instead
 Engine_FrameTimeMin          = 0x4F64CC
+# the sound stream thread's function: its short sleeps last 10 ms, a round of its decode-ahead (Pandora Tomorrow)
+Sound_StreamThread          = 0
 D3D_DeferredTextureState    = 0x4AB1D0
 D3D_Device                  = 0x4AB670
 D3D_DirtyFlags              = 0x4AB1C8
