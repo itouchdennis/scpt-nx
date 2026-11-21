@@ -46,10 +46,10 @@ std::string SystemLanguage() {
     return "int";
 }
 
-// SCDA_HOME, else the executable's folder
+// SCPT_HOME, else the executable's folder
 std::filesystem::path HomeDir() {
     static const std::filesystem::path dir = [] {
-        if (const char* home = std::getenv("SCDA_HOME"); home && *home) return std::filesystem::path(home);
+        if (const char* home = std::getenv("SCPT_HOME"); home && *home) return std::filesystem::path(home);
         char self[4096] = {};
         ssize_t n = readlink("/proc/self/exe", self, sizeof(self) - 1);
         return std::filesystem::path(std::string(self, n > 0 ? size_t(n) : 0)).parent_path();
@@ -92,7 +92,7 @@ void Exit(int code) {
 // exec the image's executable beside this one, the arguments kept and --relaunched added
 void Relaunch(const char* exe, const std::string& extra) {
     logx::Flush();
-    // the executables are lower case here: scda, scda_versus
+    // the executables are lower case here: scpt, scpt_versus
     std::string name = exe;
     for (char& c : name) c = char(std::tolower(uint8_t(c)));
     std::string path = (HomeDir() / name).string();

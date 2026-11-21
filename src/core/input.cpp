@@ -917,7 +917,7 @@ SHORT MoveDeadZone(SHORT value, float zone) {
     return SHORT(std::lround(value < 0 ? -out : out));
 }
 
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
 // The game's bindings take a dead zone on each axis, made for the Xbox's sticks, which reach both axes' ends on a
 // diagonal. The Switch's round sticks give 0.71 on each there and 0.38 on the short axis at 22.5 degrees, which that
 // dead zone cuts to 0.58 and 0.11: the camera turned fast only straight along an axis. The right stick goes round
@@ -1018,7 +1018,7 @@ bool ReadPad(int slot, XINPUT_GAMEPAD& g) {
     const app::Settings& s = app::Get();
     g.sThumbRX = s.invert_pad_x ? SHORT(-1 - rx) : rx;
     g.sThumbRY = s.invert_pad_y ? SHORT(-1 - ry) : ry;
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     SHORT round_x = g.sThumbRX, round_y = g.sThumbRY;
     ApplyDeadZone(g, s.pad_dead_zone);
     RoundStick(round_x, round_y, s.pad_dead_zone > 0.0f ? s.pad_dead_zone : kRoundDeadZone);

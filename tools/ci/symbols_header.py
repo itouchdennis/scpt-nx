@@ -2,7 +2,7 @@
 # image_symbols.h from config/<image>.toml alone, without the game: the names and addresses the host binds to are all
 # in the config, so CI can compile the port's own sources (not link them: the recompiled code needs default.xbe).
 # Same layout and order as xbe_recomp's (tools/recomp/codegen_emit.cpp, names sorted as in its std::map).
-#   symbols_header.py config/scda_v2.toml <out dir>
+#   symbols_header.py config/scpt_v2.toml <out dir>
 import pathlib
 import sys
 import tomllib

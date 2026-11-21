@@ -33,7 +33,7 @@ inline constexpr const char* kLanguages[] = {"int", "fra", "deu", "ita", "esp"};
 
 struct Settings {
     std::string monitor;             // its device name, \\.\DISPLAY2; empty the primary
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     DisplayMode display_mode = DisplayMode::Fullscreen;  // always, the menu has no choice of it there
 #else
     DisplayMode display_mode = DisplayMode::Borderless;
@@ -61,17 +61,17 @@ struct Settings {
     bool hdr_rendering = false;
     bool tone_mapping = false;
     uint32_t ambient_occlusion = 0;  // screen space, from the scene's depth: 0 off, 1 SSAO, 2 GTAO
-    bool reverb = true;              // the I3DL2 room reverb; scda.toml only
+    bool reverb = true;              // the I3DL2 room reverb; scpt.toml only
     bool settings_overlay = false;   // the settings panel as an overlay on L + R + D-pad right (F10 on a keyboard)
                                      // where the game's menu has no pages of them; the toml only
-    bool logging = false;            // the port's full log and boot.txt in logs/, off: no log files; scda.toml only
-    bool audio_dump = false;         // the mixed sound as raw float frames in logs/audio.f32, to measure it; scda.toml
+    bool logging = false;            // the port's full log and boot.txt in logs/, off: no log files; scpt.toml only
+    bool audio_dump = false;         // the mixed sound as raw float frames in logs/audio.f32, to measure it; scpt.toml
                                      // only
     bool profiling = false;          // the Switch's perf diagnostics, with a log of measurements alone if logging is
-                                     // off; scda.toml only
-    bool async_shaders = true;       // a draw whose pipeline needs compiling is skipped until the build threads have it; scda.toml only
+                                     // off; scpt.toml only
+    bool async_shaders = true;       // a draw whose pipeline needs compiling is skipped until the build threads have it; scpt.toml only
     uint32_t shader_wait_ms = 50;    // with async_shaders: per frame, how long draws wait for their builds before one is
-                                     // skipped (a character vanished for a frame or two); scda.toml only
+                                     // skipped (a character vanished for a frame or two); scpt.toml only
     bool custom_textures = true;     // images in textures\replacement\ beside the exe replace the game's
     bool dump_textures = false;      // each texture once into textures\dumps\ beside the exe
     uint32_t texture_dump_format = 0;  // 0 PNG, 1 DDS
@@ -99,7 +99,7 @@ struct Settings {
     bool skip_intros = false;        // logos video and rating screen at boot
     // the Switch's face buttons by their labels, not the Xbox's positions: A confirms and B goes back, X and Y as
     // printed; each on its own, both on there by default
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     bool swap_ab = true;
     bool swap_xy = true;
 #else
@@ -121,10 +121,10 @@ struct Settings {
 
 Settings& Get();
 void Load();
-bool LoggingWanted();  // scda.toml's logging, read before the log opens (the port)
-bool ProfilingWanted();  // scda.toml's profiling, likewise
+bool LoggingWanted();  // scpt.toml's logging, read before the log opens (the port)
+bool ProfilingWanted();  // scpt.toml's profiling, likewise
 void Save();
-void LogSettings();  // every setting into the log, as scda.toml has them
+void LogSettings();  // every setting into the log, as scpt.toml has them
 void LogSystem();    // the machine and the settings into the log, at a run's start
 void ApplyDisplay();  // any thread
 // one of kLanguages for a language setting: "auto" is the Windows display language, English when the game lacks it

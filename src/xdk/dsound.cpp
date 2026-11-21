@@ -1024,8 +1024,8 @@ HLE_STDCALL(IDirectSound_DownloadEffectsImage, 5) {
 HLE_STDCALL(DirectSoundCreateBuffer, 2) { return NewBuffer(a[0], a[1]); }
 HLE_STDCALL(IDirectSound_CreateSoundBuffer, 4) { return NewBuffer(a[1], a[2]); }
 
-// diagnostic: SCDA_DSOUND_TRACE=1 logs every buffer call but the volume and placement ones, with the voice's state
-inline const bool g_dsound_trace = std::getenv("SCDA_DSOUND_TRACE") != nullptr;
+// diagnostic: SCPT_DSOUND_TRACE=1 logs every buffer call but the volume and placement ones, with the voice's state
+inline const bool g_dsound_trace = std::getenv("SCPT_DSOUND_TRACE") != nullptr;
 #define BUFFER(name, nargs)                                                                                    \
     static uint32_t buf_##name(Voice& v, const Args& a);                                                       \
     HLE_STDCALL(IDirectSoundBuffer_##name, nargs) {                                                            \

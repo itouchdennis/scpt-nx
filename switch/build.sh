@@ -10,36 +10,36 @@
 # Start it from hbmenu with title takeover (hold R while starting a game): applet mode leaves too little memory.
 #
 #   DEVKITPRO      default /opt/devkitpro (switch-dev, switch-sdl2)
-#   SCDA_GEN_DIR   generated code from tools/regen.sh (default generated/game; made here when missing)
-#   STAGE_GAME     1: also copy the extracted disc (SCDA_GAME_SRC, default assets/) into the staging folder; by
+#   SCPT_GEN_DIR   generated code from tools/regen.sh (default generated/game; made here when missing)
+#   STAGE_GAME     1: also copy the extracted disc (SCPT_GAME_SRC, default assets/) into the staging folder; by
 #                  default only the NRO is staged and the disc is copied to the card once by hand
 #   SD_ROOT        staging SD root (default switch_sd/); a scpt.nro already there that differs from the new one is
 #                  moved to <SD_ROOT>/BAK/scpt_v<its version>.nro first, beside switch/ so it stays off the card
-#   BUILD_DIR      default build/switch-vk, build/switch for SCDA_GPU=gl
-#   SCDA_ICON      the NRO's hbmenu icon, a 256x256 JPEG (default switch/icon.jpg when it exists)
-#   SCDA_GPU       vk (default, Vulkan on mesa-switch's NVK), gl (OpenGL on switch-mesa) or null (draws nothing)
-#   SCDA_NVK_SDK   vk: the Mesa Horizon SDK's portlibs/switch (default build/nvk-sdk/opt/devkitpro/portlibs/switch,
+#   BUILD_DIR      default build/switch-vk, build/switch for SCPT_GPU=gl
+#   SCPT_ICON      the NRO's hbmenu icon, a 256x256 JPEG (default switch/icon.jpg when it exists)
+#   SCPT_GPU       vk (default, Vulkan on mesa-switch's NVK), gl (OpenGL on switch-mesa) or null (draws nothing)
+#   SCPT_NVK_SDK   vk: the Mesa Horizon SDK's portlibs/switch (default build/nvk-sdk/opt/devkitpro/portlibs/switch,
 #                  where switch/nvk/build-nvk.sh installs it)
 #   (logging: off by default, "logging = true" in sdmc:/switch/scpt/scpt.toml writes the full log to logs/)
 #   JOBS           parallel compile jobs (default: by free memory, the generated files need ~1.5 GB each)
-#   SCDA_CODE_OPT  the recompiled game code's optimization: -O3 (default) or -O2, for comparing; a change rebuilds
+#   SCPT_CODE_OPT  the recompiled game code's optimization: -O3 (default) or -O2, for comparing; a change rebuilds
 #                  all of it
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 export DEVKITPRO="${DEVKITPRO:-/opt/devkitpro}"
-GEN="${SCDA_GEN_DIR:-$REPO/generated/game}"
-GAME="${SCDA_GAME_SRC:-$REPO/assets}"
+GEN="${SCPT_GEN_DIR:-$REPO/generated/game}"
+GAME="${SCPT_GAME_SRC:-$REPO/assets}"
 SD="${SD_ROOT:-$REPO/switch_sd}"
-GPU="${SCDA_GPU:-vk}"
+GPU="${SCPT_GPU:-vk}"
 BUILD="${BUILD_DIR:-$REPO/build/switch$([ "$GPU" = vk ] && echo -vk)}"
-NVK="${SCDA_NVK_SDK:-$REPO/build/nvk-sdk/opt/devkitpro/portlibs/switch}"
+NVK="${SCPT_NVK_SDK:-$REPO/build/nvk-sdk/opt/devkitpro/portlibs/switch}"
 
 fail() { echo "error: $*" >&2; exit 1; }
 [ -f "$DEVKITPRO/cmake/Switch.cmake" ] || fail "devkitPro not found at $DEVKITPRO"
 [ -f "$DEVKITPRO/portlibs/switch/include/SDL2/SDL.h" ] || fail "switch-sdl2 missing"
-[ -f "$GEN/image_symbols.h" ] || SCDA_GEN_DIR="$GEN" "$REPO/tools/regen.sh"
-[ "$GPU" != vk ] || [ -f "$NVK/lib/libvulkan.a" ] || fail "no NVK at $NVK (build it with switch/nvk/build-nvk.sh, or set SCDA_NVK_SDK)"
+[ -f "$GEN/image_symbols.h" ] || SCPT_GEN_DIR="$GEN" "$REPO/tools/regen.sh"
+[ "$GPU" != vk ] || [ -f "$NVK/lib/libvulkan.a" ] || fail "no NVK at $NVK (build it with switch/nvk/build-nvk.sh, or set SCPT_NVK_SDK)"
 
 if [ -z "${JOBS:-}" ]; then
     mem_mb=$(( $(awk '/^MemAvailable:/ {print $2}' /proc/meminfo) / 1024 ))
@@ -50,8 +50,8 @@ fi
 cmake -S "$REPO" -B "$BUILD" -G Ninja \
     -DCMAKE_TOOLCHAIN_FILE="$DEVKITPRO/cmake/Switch.cmake" \
     -DCMAKE_BUILD_TYPE=Release \
-    -DSCDA_GEN_DIR="$GEN" -DSCDA_GPU="$GPU" ${SCDA_ICON:+-DSCDA_ICON="$SCDA_ICON"} -DSCDA_NVK_SDK="$NVK" -DSCDA_VERBOSE_LOG=OFF \
-    -DSCDA_CODE_OPT="${SCDA_CODE_OPT:--O3}" >/dev/null
+    -DSCPT_GEN_DIR="$GEN" -DSCPT_GPU="$GPU" ${SCPT_ICON:+-DSCPT_ICON="$SCPT_ICON"} -DSCPT_NVK_SDK="$NVK" -DSCPT_VERBOSE_LOG=OFF \
+    -DSCPT_CODE_OPT="${SCPT_CODE_OPT:--O3}" >/dev/null
 ninja -C "$BUILD" -j"$JOBS"
 
 # the version an NRO carries: its NACP's display version (the NRO's assets after its size, the NACP at their offset)
@@ -69,7 +69,7 @@ PY
 
 DEST="$SD/switch/scpt"
 mkdir -p "$DEST/game"
-if [ -f "$DEST/scpt.nro" ] && ! cmp -s "$BUILD/scda.nro" "$DEST/scpt.nro"; then
+if [ -f "$DEST/scpt.nro" ] && ! cmp -s "$BUILD/scpt.nro" "$DEST/scpt.nro"; then
     old="$(nro_version "$DEST/scpt.nro" || true)"
     # 0.1.0: what every NRO before versioning carried
     case "$old" in ""|0.1.0) old="unversioned_$(date -r "$DEST/scpt.nro" +%Y%m%d-%H%M)" ;; *) old="v$old" ;; esac
@@ -79,7 +79,7 @@ if [ -f "$DEST/scpt.nro" ] && ! cmp -s "$BUILD/scda.nro" "$DEST/scpt.nro"; then
     mv "$DEST/scpt.nro" "$bak"
     echo "previous scpt.nro kept as $bak"
 fi
-cp "$BUILD/scda.nro" "$DEST/scpt.nro"
+cp "$BUILD/scpt.nro" "$DEST/scpt.nro"
 if [ "${STAGE_GAME:-0}" = 1 ] && [ -f "$GAME/default.xbe" ]; then
     # several GB: copy only what changed
     rsync -a --size-only --exclude '*.iso' "$GAME/" "$DEST/game/"

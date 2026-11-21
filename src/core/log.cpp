@@ -1,9 +1,9 @@
 #include "core/log.h"
 
-#ifdef SCDA_PORT
+#ifdef SCPT_PORT
 #include "port/port.h"
 #endif
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
 #include <unistd.h>
 #endif
 
@@ -25,12 +25,12 @@ static std::mutex g_mutex;
 static FILE* g_file = nullptr;
 static std::string g_path;
 static auto g_start = std::chrono::steady_clock::now();
-#if defined(NDEBUG) && !defined(SCDA_VERBOSE_LOG)
+#if defined(NDEBUG) && !defined(SCPT_VERBOSE_LOG)
 static bool g_verbose = false;
 #else
 static bool g_verbose = true;
 #endif
-static bool g_off = false;  // scda.toml's logging off: no file
+static bool g_off = false;  // scpt.toml's logging off: no file
 
 bool Verbose() { return g_verbose; }
 
@@ -51,7 +51,7 @@ static int RunNumber(const fs::path& file, const std::string& prefix) {
 
 // the Switch keeps the log in memory until a flush (twice a second, port/switch_platform.cpp)
 static void Buffer() {
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     if (g_file) std::setvbuf(g_file, nullptr, _IOFBF, 1 << 20);
 #endif
 }
@@ -83,7 +83,7 @@ const std::string& Path() { return g_path; }
 
 void Write(Level lv, const char* fmt, ...) {
     if (!g_verbose && lv < Level::Error) return;
-#ifdef SCDA_PORT
+#ifdef SCPT_PORT
     if (g_off && !port::LogToStderr()) return;
 #endif
     char msg[4096];
@@ -103,11 +103,11 @@ void Write(Level lv, const char* fmt, ...) {
     n = std::min(n, int(sizeof(line)) - 1);
     if (g_file) {
         std::fwrite(line, 1, size_t(n), g_file);
-#ifndef SCDA_SWITCH
+#ifndef SCPT_SWITCH
         if (lv >= Level::Warn) std::fflush(g_file);  // the Switch flushes twice a second: each one is an SD write
 #endif
     }
-#ifdef SCDA_PORT
+#ifdef SCPT_PORT
     if (port::LogToStderr()) std::fwrite(line, 1, size_t(n), stderr);
 #else
     std::fwrite(line, 1, size_t(n), stderr);
@@ -118,7 +118,7 @@ void Flush() {
     std::lock_guard<std::mutex> lock(g_mutex);
     if (!g_file) return;
     std::fflush(g_file);
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     // FAT keeps the file's size in its directory entry until a sync: without one a log cut short by a hang or a
     // power off reads as empty
     fsync(fileno(g_file));

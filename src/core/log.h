@@ -19,8 +19,8 @@ void Flush();
 bool TryFlush();
 const std::string& Path();
 
-// The full log (debug builds, and SCDA_VERBOSE_LOG release builds) or report lines and errors only (release). The port
-// sets it from scda.toml's logging before Init: on, the full log; off, no log file at all (stderr still gets it
+// The full log (debug builds, and SCPT_VERBOSE_LOG release builds) or report lines and errors only (release). The port
+// sets it from scpt.toml's logging before Init: on, the full log; off, no log file at all (stderr still gets it
 // under nxlink)
 bool Verbose();
 // full: every line, in numbered logs; reports: else only the measurements (Report) and errors, in one log

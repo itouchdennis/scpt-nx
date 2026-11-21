@@ -82,7 +82,7 @@ bool OpenSplash() {
     wc.hInstance = inst;
     wc.hIcon = LoadIconW(inst, MAKEINTRESOURCEW(1));
     wc.hCursor = LoadCursorW(nullptr, MAKEINTRESOURCEW(32514));  // IDC_WAIT
-    wc.lpszClassName = L"SCDASplash";
+    wc.lpszClassName = L"SCPTSplash";
     RegisterClassExW(&wc);
     // centered on the game's monitor at one image pixel per screen pixel, as UE2 placed it on the primary
     MONITORINFO mi{sizeof(mi)};

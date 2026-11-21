@@ -43,8 +43,8 @@ struct Image {
     const char* config;
 };
 constexpr Image kImages[] = {
-    {L"SCDA", "default.xbe", "scda_v2.toml"},
-    {L"SCDA_Versus", "sc4_adv.xbe", "sc4_adv.toml"},
+    {L"SCPT", "default.xbe", "scpt_v2.toml"},
+    {L"SCPT_Versus", "sc4_adv.xbe", "sc4_adv.toml"},
 };
 
 // as CMakePresets.json and CMakeLists.txt compile it for build.bat
@@ -688,7 +688,7 @@ HWND OpenWindow() {
     wc.hInstance = inst;
     wc.hIcon = LoadIconW(inst, MAKEINTRESOURCEW(1));
     wc.hCursor = LoadCursorW(nullptr, MAKEINTRESOURCEW(32512));  // IDC_ARROW
-    wc.lpszClassName = L"SCDAGameCode";
+    wc.lpszClassName = L"SCPTGameCode";
     RegisterClassExW(&wc);
     UINT dpi = GetDpiForSystem();
     DWORD style = WS_OVERLAPPED | WS_CAPTION | WS_SYSMENU | WS_MINIMIZEBOX;
@@ -761,7 +761,7 @@ bool BuildWithWindow(std::vector<Target>& targets) {
 
 bool PrepareGameCode(const GameFiles& game) {
     // one build at a time: a second copy of the game started meanwhile waits for it, then finds the DLL current
-    HANDLE lock = CreateMutexW(nullptr, FALSE, L"SCDA-XBERecomp-GameCode");
+    HANDLE lock = CreateMutexW(nullptr, FALSE, L"SCPT-XBERecomp-GameCode");
     WaitForSingleObject(lock, INFINITE);
     std::vector<Target> stale = StaleTargets(game);
     for (const Target& target : stale) LOGR("Game code: building %ls.dll", target.image->exe);

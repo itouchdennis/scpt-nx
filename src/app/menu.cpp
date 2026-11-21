@@ -58,7 +58,7 @@ constexpr uint32_t kAudioOutputs[] = {audio::kOutputAuto, audio::kOutputMono, au
 const char* const kAudioOutputNames[] = {"AUTOMATIC", "MONO", "2.0 STEREO", "5.1 SURROUND"};
 constexpr uint32_t kShadowSizes[] = {0, 512, 1024, 2048, 4096, 8192};
 constexpr uint32_t kShadowDistances[] = {1, 2, 4, 8};
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
 constexpr uint32_t kFpsCaps[] = {30, 60};
 #else
 constexpr uint32_t kFpsCaps[] = {30, 60, 75, 90, 120, 144, 165, 240, 360, kFpsCapRefresh, 0};
@@ -394,7 +394,7 @@ bool PortHides(int id) {
 #else
     bool d3d12_only = id == kShaderModel || id == kHdr || id == kToneMapping || id == kAmbientOcclusion ||
                       id == kMsaa || id == kShadowFilter || id == kHdrOutput;
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     // the gyro button rows offer a touchpad, misc and paddles, which the Switch's controllers have not
     return d3d12_only || id == kDisplayMode || id == kMonitor || id == kGyroButton || id == kGyroButtonMode ||
            id == kGyroRecenter;
@@ -649,7 +649,7 @@ bool StepDisplayRow(int id, int step, Settings& s, char (&text)[64]) {
         case kMaxFps: {
             uint32_t cap;
             if (kVersus) {
-                // scda.toml is shared with story: a cap over versus's top shows as that top
+                // scpt.toml is shared with story: a cap over versus's top shows as that top
                 uint32_t v = s.fps_cap <= kVersusMaxFps ? s.fps_cap : kVersusMaxFps;
                 cap = kVersusFpsCaps[StepTable(kVersusFpsCaps, v, step)];
                 if (step) s.fps_cap = v;
@@ -947,7 +947,7 @@ constexpr bool kLevelSelect = true;
 // the controller page where the game has pad actions, the level select in debug builds where the game
 // has levels to open
 bool PageShown(int page) {
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     if (page == kKeyboardPage) return false;  // no mouse or keyboard there
 #endif
     if (kSc3 && page == kKeyboardPage) return false;
@@ -1383,7 +1383,7 @@ void DrawUi() {
     io.KeyRepeatRate = 0.1f;  // held arrows step ten times a second, ImGui's twenty is too fast for settings
     // scale the font with the output height; the port's overlay makes its font at twice ImGui's size, and the
     // Switch's screen is small for its height
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     io.FontGlobalScale = io.DisplaySize.y / 960.0f;
 #elif defined(_WIN32)
     io.FontGlobalScale = std::max(1.0f, io.DisplaySize.y / 720.0f);

@@ -15,7 +15,7 @@ std::string SystemLanguage();
 uint32_t ScreenWidth();
 uint32_t ScreenHeight();
 uint32_t RefreshRate();  // 0 when unknown
-// the folder the executable runs from: beside the binary on Linux, sdmc:/switch/scda on the Switch
+// the folder the executable runs from: beside the binary on Linux, sdmc:/switch/scpt on the Switch
 std::filesystem::path HomeDir();
 // a message the player must see before the game exits (no game files, a failed boot)
 void Fatal(const std::string& title, const std::string& text);
@@ -40,7 +40,7 @@ bool LogToStderr();
 // a step of the start reached, written to boot.txt at once on the Switch (no-op elsewhere): what the log cannot
 // show when the process dies before its first write
 void Breadcrumb(const char* step);
-// scda.toml's logging off: no boot.txt either (before Init; crash.txt is still written on a crash)
+// scpt.toml's logging off: no boot.txt either (before Init; crash.txt is still written on a crash)
 void SetBootLog(bool on);
 // the platform's setup before anything else runs (log device, exception handler) and its exit (the Switch: back to the
 // HOME menu, the other threads paused and the services closed first)
@@ -58,7 +58,7 @@ bool Relaunched();
 void KeepClocks(uint32_t cpu_mhz);
 // the main thread's event loop: leaves once Relaunch (for the next NRO) or Exit (for the HOME menu) has been called
 void ServiceRelaunch();
-// the perf branch's thread and profiler diagnostics (switch_profile.cpp), while scda.toml's profiling is on
+// the perf branch's thread and profiler diagnostics (switch_profile.cpp), while scpt.toml's profiling is on
 void SetProfiling(bool on);
 void StartProfiler();
 #endif
@@ -75,7 +75,7 @@ bool SurfaceSizeDiffers(uint32_t w, uint32_t h);
 void SetSurfaceSize(uint32_t w, uint32_t h);
 void DrawableSize(uint32_t& w, uint32_t& h);
 
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
 // the guest's 4 GB on Horizon (switch_memory.cpp): reserved address space, both physical windows on one RAM, and
 // commits in whole granules; null or false when Horizon refuses
 uint8_t* ReserveGuest();

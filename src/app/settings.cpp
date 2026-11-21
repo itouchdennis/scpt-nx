@@ -117,7 +117,7 @@ void Load() {
     s.height = t["height"].value_or(s.height);
     s.render_percent = t["render_percent"].value_or(s.render_percent);
     s.fps_cap = t["fps_cap"].value_or(s.fps_cap);
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     // the Switch's screen and TV are 60 Hz: 30 or 60, the menu's two
     s.fps_cap = s.fps_cap == 30 ? 30 : 60;
     s.cpu_clock = std::clamp<uint32_t>(t["cpu_clock"].value_or(s.cpu_clock), 1020, 1785);
@@ -213,7 +213,7 @@ void Load() {
     s.shadow_filter = 1;
     s.shader_model = 1;
     s.hdr_rendering = s.tone_mapping = s.hdr_output = false;
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     s.display_mode = DisplayMode::Fullscreen;
 #endif
 #endif

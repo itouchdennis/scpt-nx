@@ -1,4 +1,4 @@
-// The title's Direct3D 8 calls drawn with OpenGL 4.3 (SCDA_GPU=gl): Linux on Mesa, the Switch on switch-mesa's
+// The title's Direct3D 8 calls drawn with OpenGL 4.3 (SCPT_GPU=gl): Linux on Mesa, the Switch on switch-mesa's
 // nouveau through EGL. It follows gpu/d3d12.cpp draw for draw: the same HLSL from gpu/shaders.cpp (as GLSL through
 // gl_shader.cpp), the same constants, targets kept by surface memory, textures by guest address.
 //
@@ -10,7 +10,7 @@
 // MSAA, SMAA, shader model 3 HDR and soft shadows, ambient occlusion, the texture pack, captures, the settings panel.
 #include <SDL.h>
 #include <GL/glcorearb.h>
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
 #include <EGL/egl.h>
 #endif
 #include <dxgiformat.h>
@@ -56,7 +56,7 @@ constexpr GLenum kDxt3 = 0x83F2;
 constexpr GLenum kDxt5 = 0x83F3;
 constexpr GLenum kMaxAnisotropy = 0x84FE;
 
-#define SCDA_GL_FUNCS(X)                                                                                              \
+#define SCPT_GL_FUNCS(X)                                                                                              \
     X(PFNGLGETSTRINGPROC, GetString)                                                                                  \
     X(PFNGLGETSTRINGIPROC, GetStringi)                                                                                \
     X(PFNGLGETINTEGERVPROC, GetIntegerv)                                                                              \
@@ -154,7 +154,7 @@ constexpr GLenum kMaxAnisotropy = 0x84FE;
 
 struct GlFuncs {
 #define X(type, name) type name = nullptr;
-    SCDA_GL_FUNCS(X)
+    SCPT_GL_FUNCS(X)
 #undef X
 };
 GlFuncs gl;
@@ -167,7 +167,7 @@ bool LoadGl() {
         LOGE("gl: no gl" #name);                                                                                      \
         ok = false;                                                                                                   \
     }
-    SCDA_GL_FUNCS(X)
+    SCPT_GL_FUNCS(X)
 #undef X
     return ok;
 }
@@ -252,7 +252,7 @@ struct Shader {
 // streaming memory for vertices, indices and constants: one persistently mapped buffer in kSegments parts, each
 // fenced when the ring moves past it and waited for before it is written again
 constexpr uint32_t kSegments = 4;
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
 constexpr size_t kRingSize = 32u << 20;
 #else
 constexpr size_t kRingSize = 64u << 20;
@@ -802,7 +802,7 @@ void GlBackend::Warm(double budget_ms) {
 // the linker's context shares ctx_'s objects and binds no surface (the window's is the render thread's alone); only
 // on the Switch, where SDL's GL is EGL
 void GlBackend::StartLinker() {
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     // made with EGL itself, ctx_ as its share context: SDL's SHARE_WITH_CURRENT_CONTEXT gave one that shared
     // nothing (its programs got names the renderer already used, a garbled then black picture)
     EGLDisplay dpy = eglGetCurrentDisplay();
@@ -1862,11 +1862,11 @@ void GlBackend::CountFps() {
     }
 }
 
-// SCDA_SHOT_EVERY=n: every nth frame as shots/frame_<present>.ppm beside the log, for looking at a run without a
+// SCPT_SHOT_EVERY=n: every nth frame as shots/frame_<present>.ppm beside the log, for looking at a run without a
 // screen
 void GlBackend::SaveShot(Target& t) {
     static const uint64_t every = [] {
-        const char* e = std::getenv("SCDA_SHOT_EVERY");
+        const char* e = std::getenv("SCPT_SHOT_EVERY");
         return e ? std::strtoull(e, nullptr, 10) : 0ull;
     }();
     if (!every || presents_ % every) return;

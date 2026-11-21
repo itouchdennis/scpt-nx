@@ -36,7 +36,7 @@ constexpr uint32_t kIsPage = 0x28FA86;     // thiscall menu (const char* page na
 constexpr uint32_t kGameModeName = 0x541A98;  // "P_OnlineOffline"
 constexpr uint32_t kListItems = 0x5C, kListSelection = 0x9C;  // items, selected index (short)
 // the Switch's list has no Versus (xbox_live.cpp's AddItem): from it on, an item is one further to the press handler
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
 constexpr int kVersusIndex = 2;
 #else
 constexpr int kVersusIndex = -1;

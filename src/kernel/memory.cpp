@@ -11,7 +11,7 @@
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
-#elif defined(SCDA_SWITCH)
+#elif defined(SCPT_SWITCH)
 #include "port/port.h"
 #else
 #include <sys/mman.h>
@@ -57,7 +57,7 @@ bool Init() {
         UnmapViewOfFile(b + kContiguousBase);
         UnmapViewOfFile(b + kWriteCombineBase);
     }
-#elif defined(SCDA_SWITCH)
+#elif defined(SCPT_SWITCH)
     g_base = port::ReserveGuest();
     if (g_base && !port::MapPhysical(kContiguousBase, kWriteCombineBase, kPhysicalSize)) g_base = nullptr;
 #else
@@ -90,7 +90,7 @@ bool Commit(uint32_t va, uint32_t size) {
         LOGE("memory: commit %08X+%X failed", first, uint32_t(end - first));
         return false;
     }
-#elif defined(SCDA_SWITCH)
+#elif defined(SCPT_SWITCH)
     if (!port::CommitGuest(first, uint32_t(end - first))) {
         LOGE("memory: commit %08X+%X failed", first, uint32_t(end - first));
         return false;
@@ -112,7 +112,7 @@ void Decommit(uint32_t va, uint32_t size) {
     std::lock_guard<std::recursive_mutex> lock(g_lock);
 #ifdef _WIN32
     VirtualFree(g_base + first, size_t(end - first), MEM_DECOMMIT);
-#elif defined(SCDA_SWITCH)
+#elif defined(SCPT_SWITCH)
     port::DecommitGuest(first, uint32_t(end - first));
 #else
     madvise(g_base + first, size_t(end - first), MADV_DONTNEED);

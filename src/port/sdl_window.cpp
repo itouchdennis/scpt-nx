@@ -2,7 +2,7 @@
 // mouse and focus into the Win32 view input.cpp reads (port/win32_input.h) and keeps the controllers (port/pads.h).
 // The game runs on its own guest threads from kernel::Boot; this thread only pumps events until the player quits.
 #include <SDL.h>
-#ifdef SCDA_SDL_VULKAN
+#ifdef SCPT_SDL_VULKAN
 #include <SDL_vulkan.h>
 #include <vulkan/vulkan.h>
 #endif
@@ -37,8 +37,8 @@ bool Load(const std::filesystem::path& dll);
 
 // the Switch's Vulkan renderer opens no SDL window: SDL's would put an EGL surface on the default NWindow, which
 // Vulkan presents to itself (switch_platform.cpp). Input and sound need none
-#if defined(SCDA_VK) && defined(SCDA_SWITCH)
-#define SCDA_NO_WINDOW
+#if defined(SCPT_VK) && defined(SCPT_SWITCH)
+#define SCPT_NO_WINDOW
 #endif
 
 namespace {
@@ -125,7 +125,7 @@ void OnKey(const SDL_KeyboardEvent& k) {
 
 // what input.cpp and the menus take for the window: the SDL window, or a stand-in where there is none
 HWND Handle() {
-#ifdef SCDA_NO_WINDOW
+#ifdef SCPT_NO_WINDOW
     static int stand_in;
     return &stand_in;
 #else
@@ -135,14 +135,14 @@ HWND Handle() {
 
 // the window's size in pixels, as the renderer sees it
 void Drawable(int& w, int& h) {
-#if defined(SCDA_NO_WINDOW)
+#if defined(SCPT_NO_WINDOW)
     // 720p unless width and height ask for another, as ApplyNow sets the display mode with a window
     const app::Settings& s = app::Get();
     w = s.width && s.height ? int(s.width) : 1280;
     h = s.width && s.height ? int(s.height) : 720;
-#elif defined(SCDA_SDL_VULKAN)
+#elif defined(SCPT_SDL_VULKAN)
     SDL_Vulkan_GetDrawableSize(g_window, &w, &h);
-#elif defined(SCDA_GL)
+#elif defined(SCPT_GL)
     SDL_GL_GetDrawableSize(g_window, &w, &h);
 #else
     SDL_GetWindowSize(g_window, &w, &h);
@@ -190,9 +190,9 @@ uint32_t ButtonBit(uint8_t button) {
 
 void ApplyNow() {
     const app::Settings& s = app::Get();
-#if defined(SCDA_NO_WINDOW)
+#if defined(SCPT_NO_WINDOW)
     (void)s;
-#elif defined(SCDA_SWITCH)
+#elif defined(SCPT_SWITCH)
     // 720p unless width and height ask for another: docked the console would draw the frame at 1080p
     SDL_DisplayMode mode{};
     SDL_GetDesktopDisplayMode(0, &mode);
@@ -386,7 +386,7 @@ void* MenuCursor() { return nullptr; }
 bool PrepareGameCode(const GameFiles&) { return dispatch::Load({}); }
 
 void Pace() {
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     port::KeepClocks(Get().cpu_clock);
 #endif
     using clock = std::chrono::steady_clock;
@@ -412,7 +412,7 @@ void Pace() {
 
 // in the background the game and its sound hold still, as on Windows
 void WaitWhileUnfocused() {
-#ifndef SCDA_SWITCH
+#ifndef SCPT_SWITCH
     auto should = [] { return Get().pause_on_focus_loss && !input::NetSession() && !g_focus && g_window; };
     if (!should()) return;
     LOGI("focus lost: paused");
@@ -454,7 +454,7 @@ void DrawableSize(uint32_t& w, uint32_t& h) {
     h = uint32_t(std::max<int>(g_height, 1));
 }
 
-#ifdef SCDA_SDL_VULKAN
+#ifdef SCPT_SDL_VULKAN
 std::vector<const char*> VulkanInstanceExtensions() {
     unsigned n = 0;
     SDL_Vulkan_GetInstanceExtensions(g_window, &n, nullptr);
@@ -472,11 +472,11 @@ bool CreateVulkanSurface(void* instance, uint64_t* surface) {
     *surface = uint64_t(s);
     return true;
 }
-#elif !defined(SCDA_SWITCH)
+#elif !defined(SCPT_SWITCH)
 std::vector<const char*> VulkanInstanceExtensions() { return {}; }
 bool CreateVulkanSurface(void*, uint64_t*) { return false; }
 #endif
-#ifndef SCDA_SWITCH
+#ifndef SCPT_SWITCH
 bool SurfaceSizeDiffers(uint32_t, uint32_t) { return false; }
 void SetSurfaceSize(uint32_t, uint32_t) {}
 #endif
@@ -495,7 +495,7 @@ int main(int argc, char** argv) {
     bool profiling = app::ProfilingWanted();
     logx::SetLogging(logging, profiling);
     port::SetBootLog(logging);
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     port::SetProfiling(profiling);
 #endif
     port::Init(argc, argv);
@@ -525,10 +525,10 @@ int main(int argc, char** argv) {
     std::string title = "Tom Clancy's Splinter Cell: Pandora Tomorrow";
     if (app::Instance()) title += " [" + std::to_string(app::Instance()) + "]";
     Uint32 flags = SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
-#ifdef SCDA_SDL_VULKAN
+#ifdef SCPT_SDL_VULKAN
     flags |= SDL_WINDOW_VULKAN;
 #endif
-#ifdef SCDA_GL
+#ifdef SCPT_GL
     // the OpenGL renderer (gpu_gl.cpp) makes its context on this window: 4.3 core, no depth of its own
     flags |= SDL_WINDOW_OPENGL;
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
@@ -538,7 +538,7 @@ int main(int argc, char** argv) {
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 0);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 0);
 #endif
-#ifdef SCDA_NO_WINDOW
+#ifdef SCPT_NO_WINDOW
     (void)flags;
     ApplyNow();
     g_focus = true;
@@ -553,7 +553,7 @@ int main(int argc, char** argv) {
     ApplyNow();
     g_focus = (SDL_GetWindowFlags(g_window) & SDL_WINDOW_INPUT_FOCUS) != 0;
 #endif
-#ifndef SCDA_SWITCH
+#ifndef SCPT_SWITCH
     // typed characters for name entry; on the Switch SDL opens the system keyboard for this, so not there
     SDL_StartTextInput();
 #endif

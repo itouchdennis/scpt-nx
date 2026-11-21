@@ -24,7 +24,7 @@ jobs:
       - name: Notes and files
         run: |
           tag="${{ inputs.tag || github.ref_name }}"
-          version="$(sed -nE 's/^ *project\(scda VERSION ([0-9.]+) .*/\1/p' CMakeLists.txt | head -1)"
+          version="$(sed -nE 's/^ *project\(scpt VERSION ([0-9.]+) .*/\1/p' CMakeLists.txt | head -1)"
           # a new tag must match the release in CMakeLists.txt (a run by hand may redo an older release from here)
           if [ "${{ github.event_name }}" = push ] && [ "$tag" != "v$version" ]; then
               echo "the tag $tag is not CMakeLists.txt's version v$version"; exit 1

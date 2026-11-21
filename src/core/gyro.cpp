@@ -9,7 +9,7 @@
 #include <iterator>
 #include <mutex>
 
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
 #include <switch.h>
 #else
 #include <SDL3/SDL.h>
@@ -38,7 +38,7 @@ constexpr uint64_t kCalibrateNs = 10'000'000'000;  // a calibration the controll
 constexpr float kSmoothSpeed = 5.0f;  // degrees a second
 constexpr float kSmoothSeconds = 0.1f;
 
-#ifndef SCDA_SWITCH
+#ifndef SCPT_SWITCH
 // kButtonNames in order
 constexpr SDL_GamepadButton kButtons[] = {
     SDL_GAMEPAD_BUTTON_INVALID,       SDL_GAMEPAD_BUTTON_TOUCHPAD,      SDL_GAMEPAD_BUTTON_MISC1,
@@ -189,14 +189,14 @@ void ReadGyro(Motion& m, const Vec3& radians, uint64_t ns) {
 }
 
 uint64_t NowNs() {
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     return armTicksToNs(armGetSystemTick());
 #else
     return SDL_GetTicksNS();
 #endif
 }
 
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
 // Player 1's controller: the console's Joy-Con in handheld, a Pro Controller, or the right Joy-Con of a pair
 constexpr float kTwoPi = 6.2831853f;
 constexpr float kGravity = 9.80665f;  // metres a second squared
@@ -356,7 +356,7 @@ float AxisTurn(const Motion& m, uint32_t axis) {
 Turn Take(const Settings& s) {
     static uint64_t last_take = 0;
     if (!s.enabled) return {};
-#ifndef SCDA_SWITCH
+#ifndef SCPT_SWITCH
     EnsureSensors();
 #endif
     uint64_t now = NowNs();
@@ -364,7 +364,7 @@ Turn Take(const Settings& s) {
     last_take = now;
     std::lock_guard lock(g_lock);
     Motion& m = g_motion;
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     Poll(m);
 #endif
     EndStaleCalibration(m, now);
@@ -395,7 +395,7 @@ void StartCalibration() {
 // the menu asks each frame; on the Switch the sensors are read here too, as the look update does not run in the menu
 bool Calibrating() {
     std::lock_guard lock(g_lock);
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     if (g_motion.calibrating) Poll(g_motion);
 #endif
     EndStaleCalibration(g_motion, NowNs());

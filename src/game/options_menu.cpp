@@ -100,7 +100,7 @@ constexpr uint32_t kRight = 0x27;
 constexpr uint32_t kEscape = 0x1B;
 const char* const kCaptions[] = {"Recomp Settings", "Mouse and Keyboard", "Controller"};
 // the captions listed, by mode: the Switch has no mouse or keyboard
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
 constexpr int kListedModes[] = {0, 2};
 #else
 constexpr int kListedModes[] = {0, 1, 2};

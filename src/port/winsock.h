@@ -80,7 +80,7 @@ inline uint64_t GetTickCount64() {
     using namespace std::chrono;
     return uint64_t(duration_cast<milliseconds>(steady_clock::now().time_since_epoch()).count());
 }
-#ifndef SCDA_SLEEP_DEFINED
-#define SCDA_SLEEP_DEFINED
+#ifndef SCPT_SLEEP_DEFINED
+#define SCPT_SLEEP_DEFINED
 inline void Sleep(DWORD ms) { std::this_thread::sleep_for(std::chrono::milliseconds(ms)); }
 #endif

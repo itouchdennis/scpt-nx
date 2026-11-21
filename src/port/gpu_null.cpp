@@ -1,4 +1,4 @@
-// A backend that draws nothing (SCDA_GPU=null): the game runs, paces its frames and plays its sound, for testing the
+// A backend that draws nothing (SCPT_GPU=null): the game runs, paces its frames and plays its sound, for testing the
 // recompiled code, the kernel and the sound without a renderer. Locks find guest memory as the CPU left it.
 #include <algorithm>
 #include <chrono>

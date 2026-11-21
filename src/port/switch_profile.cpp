@@ -6,7 +6,7 @@
 //   program counter counted, and let go. A thread in a system call (an svc at or just before its program counter)
 //   has its return address counted too, and every return address on its stack: who made the call, and the calls
 //   that led there. logs/profile.txt holds the counts of the whole run
-//   (offsets into scda.elf from the module's base, which addr2line or nm turn into functions), the log the top ones
+//   (offsets into scpt.elf from the module's base, which addr2line or nm turn into functions), the log the top ones
 //   of each window.
 #include <switch.h>
 
@@ -57,7 +57,7 @@ std::vector<Named> g_named;
 std::unordered_map<std::string, std::unordered_map<u32, u32>> g_run;  // by thread name, the whole run
 std::unordered_map<std::string, std::unordered_map<u32, u32>> g_run_callers;
 std::unordered_map<std::string, std::unordered_map<u32, u32>> g_run_stacks;
-u64 g_base = 0;  // the module's: where scda.elf's address 0 is
+u64 g_base = 0;  // the module's: where scpt.elf's address 0 is
 u64 g_text = 0;  // its code's size
 constexpr u64 kStackScan = 4096;  // bytes of a stack searched for return addresses
 constexpr size_t kStackFrames = 24;
@@ -198,11 +198,11 @@ void WriteCounts(FILE* f, const char* what, const std::string& name, const std::
     for (auto& [off, n] : v) std::fprintf(f, "%08X %u\n", off, n);
 }
 
-// every name's counts of the run so far, as offsets into scda.elf; overwritten each window
+// every name's counts of the run so far, as offsets into scpt.elf; overwritten each window
 void WriteRun() {
     FILE* f = std::fopen("sdmc:/switch/scct/logs/profile.txt", "w");
     if (!f) return;
-    std::fprintf(f, "# offsets into scda.elf (%u byte buckets), samples; module base %llX\n", kBucket,
+    std::fprintf(f, "# offsets into scpt.elf (%u byte buckets), samples; module base %llX\n", kBucket,
                  (unsigned long long)g_base);
     std::fprintf(f, "# thread: where it was; callers: who made the system call it was in; stacks: the return addresses "
                     "on the stack in a system call, each once a sample\n");

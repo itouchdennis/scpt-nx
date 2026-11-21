@@ -1,6 +1,6 @@
 # Porting an Xbox recomp game to the Nintendo Switch
 
-This is what it took to bring Splinter Cell: Double Agent (SCDA-XBERecomp) to the Switch. It is written to make the
+This is what it took to bring Splinter Cell: Double Agent (SCPT-XBERecomp) to the Switch. It is written to make the
 next port faster. Each item comes in the order it matters in a new port, with the failure you get without it and the
 fix. The source files named here are in this repository.
 
@@ -27,7 +27,7 @@ Rule: everything platform specific goes into `src/port/`, behind `port/port.h`. 
 **and** the Switch, and Linux is the quick test bed.
 
 **Order that worked:**
-1. Linux build with the null renderer (`SCDA_GPU=null`): does the game boot, do kernel, files and threads work?
+1. Linux build with the null renderer (`SCPT_GPU=null`): does the game boot, do kernel, files and threads work?
 2. Switch build with the null renderer: memory, threads, file system and logs on real hardware.
 3. Renderer: **Vulkan on NVK right away**, not GL first (section 5).
 4. Audio, input, relaunch (menu → mission → menu), performance.
@@ -41,13 +41,13 @@ Rule: everything platform specific goes into `src/port/`, behind `port/port.h`. 
 - `cmake/portable.cmake` covers Linux and the Switch:
   - **`-fsigned-char` on AArch64**: ARM's `char` is unsigned, x86's signed, and recompiled code and XDK
     reimplementations rely on the latter.
-  - Renderer by `SCDA_GPU=vk|gl|null`, sources **filtered per backend**: a glob that pulls `vk_device.cpp` into the
+  - Renderer by `SCPT_GPU=vk|gl|null`, sources **filtered per backend**: a glob that pulls `vk_device.cpp` into the
     GL build fails to link.
   - Link-time wraps for libnx and SDL (section 3): `--wrap=SDL_SYS_SetThreadPriority`, `--wrap=threadCreate`,
     `--wrap=threadClose`, `--wrap=condvarWaitTimeout`.
-- `switch/build.sh` builds **and stages** the NRO: `build/switch-vk/scda.nro` → `switch_sd/switch/scda/scda.nro`.
-  A bare `ninja` does not update `switch_sd/`. Vulkan is the default; `SCDA_GPU=gl` builds the GL renderer.
-- SD card layout (`sdmc:/switch/scda/`): `scda.nro`, `game/` (your extracted disc), `scda.toml`, `logs/`, `hdd/`
+- `switch/build.sh` builds **and stages** the NRO: `build/switch-vk/scpt.nro` → `switch_sd/switch/scpt/scpt.nro`.
+  A bare `ninja` does not update `switch_sd/`. Vulkan is the default; `SCPT_GPU=gl` builds the GL renderer.
+- SD card layout (`sdmc:/switch/scpt/`): `scpt.nro`, `game/` (your extracted disc), `scpt.toml`, `logs/`, `hdd/`
   (the Xbox hard disk: E:, T:, U:, Z:), `shaders.vkb`.
 - **Always start with title takeover** (hold R while starting a game): applet mode leaves too little memory.
 
@@ -76,9 +76,9 @@ The Xbox game expects a 32 bit address space of its own; guest address = `base +
 | every thread lands on core 0 | every thread prefers core 0 and may run on cores 0 to 2 (core 3 is the system's and does not time-slice the default priority); the thread that presents takes core 2 for its own and the render thread core 1, both at 0x2B (`port::TakeCore`). Dealt round robin, the two often shared a core while another stood idle |
 | the process may hold ~96 kernel threads, ended detached threads keep theirs | close ended detached threads yourself (`threadCreate`/`threadClose` wrapped) |
 | SDL's audio "TIME_CRITICAL" becomes 0x3B on the Switch (time-sliced), audio crackles | wrap `SDL_SYS_SetThreadPriority`: TIME_CRITICAL → **0x2B** (as burnout3-sw) |
-| guest threads need big stacks | 16 MB per guest thread (as nfsu2-sw), `SCDA_STACK_MB` overrides it |
+| guest threads need big stacks | 16 MB per guest thread (as nfsu2-sw), `SCPT_STACK_MB` overrides it |
 | clocks | set them one by one through `clkrst` (the FastLoad boost drops the GPU to 76.8 MHz): Nintendo's official ones (CPU 1020, GPU 384 handheld / 768 docked, memory 1331 / 1600 MHz) with a CPU setting up to 1785. The system puts its own back on docking, after the HOME menu and sleep: set them again on a mode change and from an applet hook (`AppletHookType_OnFocusState`, `OnResume`, ...), never by watching the clocks, so an overclocking tool (sys-clk, Horizon OC) keeps its own. The game's own code limits the frame rate, so the CPU clock is what buys frames |
-| waiting wakes a core for nothing | sleep in one go and let a wait that is not alertable wake once a second at most (APCs need the short slices only when alertable); in SCDA 2 ms sleep slices and 50 ms wait wake-ups woke the cores ~1,400 times a second |
+| waiting wakes a core for nothing | sleep in one go and let a wait that is not alertable wake once a second at most (APCs need the short slices only when alertable); in SCPT 2 ms sleep slices and 50 ms wait wake-ups woke the cores ~1,400 times a second |
 
 ---
 
@@ -102,7 +102,7 @@ Each of these cost a crash or an empty file on the Switch's SD card:
 
 ## 5. Renderer: Vulkan on NVK from the start
 
-**Lesson from SCDA: GL on switch-mesa 20.1 is a dead end.** It keeps neither program binaries nor a disk cache, so
+**Lesson from SCPT: GL on switch-mesa 20.1 is a dead end.** It keeps neither program binaries nor a disk cache, so
 every start links every shader again and the game stutters at each new material. Program binaries, a shader list
 replayed at start and linker threads all failed to fix it. nfsmw-nx runs smoothly on NVK with a pipeline cache, and
 the same worked here.
@@ -112,7 +112,7 @@ the same worked here.
   clang/llvm/libclc/spirv-llvm-translator, rust with `rust-aarch64-gnu`, bindgen, cbindgen, and
   `pacman -S switch-libexpat switch-zlib switch-libzstd` from devkitPro.
 - `MESA=/path/to/mesa-switch switch/nvk/build-nvk.sh` installs to `build/nvk-sdk/opt/devkitpro/portlibs/switch`,
-  where `switch/build.sh` looks for `lib/libvulkan.a` (or set `SCDA_NVK_SDK`).
+  where `switch/build.sh` looks for `lib/libvulkan.a` (or set `SCPT_NVK_SDK`).
 
 ### Linking it in
 - **Static, no loader**: only `vkGetInstanceProcAddr` is linked, everything else is loaded through it
@@ -120,7 +120,7 @@ the same worked here.
 - Link list: `libvulkan.a expat zstd z nx` (nx twice) `stdc++ m`.
 - **Stubs** (`switch_stubs.c`): libSDL2.a pulls in EGL and NVK pulls in libelf (its CUBIN parser, never run on the
   Switch); both are served by stubs that fail cleanly.
-- **No SDL window** (`SCDA_NO_WINDOW`): the surface comes from `nwindowGetDefault` + `nwindowSetDimensions` +
+- **No SDL window** (`SCPT_NO_WINDOW`): the surface comes from `nwindowGetDefault` + `nwindowSetDimensions` +
   `vkCreateViSurfaceNN`. SDL only does input and audio.
 
 ### Backend design that worked
@@ -164,8 +164,8 @@ the same worked here.
 
 ### Testing on a PC
 - `build/linux-vk` on RADV is the quick test bed for the same backend code.
-- `SCDA_VK_VALIDATE=1` turns on the validation layers (where installed).
-- `SCDA_SHOT_EVERY=150` takes screenshots, which can be checked without looking at a screen.
+- `SCPT_VK_VALIDATE=1` turns on the validation layers (where installed).
+- `SCPT_SHOT_EVERY=150` takes screenshots, which can be checked without looking at a screen.
 
 ---
 
@@ -186,11 +186,11 @@ matters (`sdl_audio.cpp`):
 - Finding it faster than we did:
   - "output starved" or "stream ran dry" in the log means the queue or the game; nothing there and still crackling
     means the driver.
-  - `SCDA_AUDIO_DUMP=<file>` captures the mix before the limiter on a PC (raw interleaved float32). Check peak, RMS
+  - `SCPT_AUDIO_DUMP=<file>` captures the mix before the limiter on a PC (raw interleaved float32). Check peak, RMS
     and sample jumps with numpy. Here the mix was clean (peak ~0.06 in the menu), so the problem was behind it.
   - Every 10 s the output logs "audio: the mix peaked at …" when the limiter acted; seen often, the mix is too hot.
 - Should 2048 not be enough: bypass SDL and play through libnx's `audout` with more buffers.
-- **Music through a short looping buffer.** SCDA streams its music into a 48 ms looping stereo buffer it refills from
+- **Music through a short looping buffer.** SCPT streams its music into a 48 ms looping stereo buffer it refills from
   the write cursor `GetCurrentPosition` gives (speech and ambience are streams of packets and were fine). Two traps
   made the music sound doubled, a little behind itself, and clicking:
   1. the write cursor stood 256 frames past the play cursor, inside the 480 the mixer reads at a time, so each block
@@ -198,7 +198,7 @@ matters (`sdl_audio.cpp`):
   2. the bursts above ran the play cursor 40 ms through a buffer the game can write 36 ms of ahead: pace the mixer by
      the clock.
   Music only, in the menu and in game, and speech clean: think of looping buffers first.
-- **Measure the mix, do not guess it.** `audio_dump = true` in `scda.toml` writes the fold to `logs/audio.f32` (raw
+- **Measure the mix, do not guess it.** `audio_dump = true` in `scpt.toml` writes the fold to `logs/audio.f32` (raw
   float, 48 kHz, interleaved). With numpy: the autocorrelation shows a delayed copy as a narrow peak at its delay,
   and clicks (sample steps far above the local mean step) taken modulo the mixer block (480) and the looping
   buffer's length show where they come from. The clicks went from ~90 to 2 in 20 s, and the 6 s period of the rest
@@ -258,7 +258,7 @@ kind, and an "alive" every 10 s.
 ## 9. Diagnostics (build them early, they paid off every time)
 
 - **Crash handler**: host and guest state into the log, addresses relative to the NRO's start → `addr2line -e
-  scda.elf`; `crash.txt` and `boot.txt` in `logs/`.
+  scpt.elf`; `crash.txt` and `boot.txt` in `logs/`.
 - **Watchdog**: each guest thread's last indirect call and a stack excerpt every 15 s.
 - Debug builds trace the first 3000 kernel calls.
 - **Frame time breakdown** every 10 s: the title's work against its waits for the GPU, read-backs and flushes, plus
@@ -269,7 +269,7 @@ kind, and an "alive" every 10 s.
 
 ## 10. Performance and battery: measure first (`profiling = true`)
 
-`profiling = true` in `scda.toml` (apart from `logging`) writes a lean `logs/scda.log` of measurements alone (full
+`profiling = true` in `scpt.toml` (apart from `logging`) writes a lean `logs/scpt.log` of measurements alone (full
 logging writes every file opened and slows the very thread measured) and `logs/profile.txt`
 (`switch_profile.cpp`). Every 10 s:
 
@@ -277,16 +277,16 @@ logging writes every file opened and slows the very thread measured) and `logs/p
   `InfoType_ThreadTickCount` on its handle); sums per core over 100% mean threads compete.
 - **A sampling profiler** on the three busiest threads, ~500 times a second: `svcSetThreadActivity` pauses the
   thread, `svcGetThreadContext3` reads it, it runs on. Offsets from the module base (`svcQueryMemory` on a function
-  of your own; `__start__` reads 0) resolve against the build's `scda.elf` with `nm`/`addr2line`, so keep the ELF of
+  of your own; `__start__` reads 0) resolve against the build's `scpt.elf` with `nm`/`addr2line`, so keep the ELF of
   every build you measure. **A thread blocked in a system call reports the `svc` itself as its PC**: for such samples
   the return addresses on its stack (bl/blr targets, within its stack region) show who called, up to the emulated
   kernel's functions.
-- **Files**: opens, misses, queries, reads and writes by Xbox path, the busiest first. In SCDA they showed that file
+- **Files**: opens, misses, queries, reads and writes by Xbox path, the busiest first. In SCPT they showed that file
   IO costs at loading and saving (language files opened hundreds of times, a save written in 4 KB pieces), not in
   play (~150 KB/s of streamed ambience).
 - **Heap**: `malloc`, `calloc`, `realloc` and `memalign` wrapped at link time, every call counted and one in 32
   sampled with its stack, in a fixed table (the counting may not allocate); and `mallinfo` against libnx's heap
-  (`fake_heap_start`/`end`). The system's own figure counts the whole heap as used from the start. SCDA used ~800 MB
+  (`fake_heap_start`/`end`). The system's own figure counts the whole heap as used from the start. SCPT used ~800 MB
   of a 3.2 GB heap in a level.
 - **Waiting**: Sleep(0) yields, polls, wake-ups of waits, sleep slices, stalls and the frame cap's spin.
 - **Battery**: `psmGetRawBatteryChargePercentage` to a thousandth of a percent, as % an hour over the window and the
@@ -296,8 +296,8 @@ logging writes every file opened and slows the very thread measured) and `logs/p
 time lines between builds; change one thing at a time; and for anything that skips work (comparing state, say),
 first a check build that does it all the same and counts what the shortcut would miss.
 
-**What it found in SCDA** (handheld, 1785 MHz): 42.7 → 40.2 ms a frame. The game's thread is the limit, ~65% of it
-recompiled code with a flat profile; `-O3` for the game code gave 3.4% (`SCDA_CODE_OPT`, `-O2` to compare; LTO is
+**What it found in SCPT** (handheld, 1785 MHz): 42.7 → 40.2 ms a frame. The game's thread is the limit, ~65% of it
+recompiled code with a flat profile; `-O3` for the game code gave 3.4% (`SCPT_CODE_OPT`, `-O2` to compare; LTO is
 built but not measured). The GPU waited 0%. Battery: waking the cores less changed nothing where the game cannot hold
 its frame rate; the clocks, the screen and the GPU drain it (~25% an hour).
 
@@ -305,7 +305,7 @@ its frame rate; the clocks, the screen and the GPU drain it (~25% an hour).
 
 ## 11. Checklist for the next game
 
-- [ ] `tools/regen.sh` with the new XBE and a recompiler config; the Linux build with `SCDA_GPU=null` boots
+- [ ] `tools/regen.sh` with the new XBE and a recompiler config; the Linux build with `SCPT_GPU=null` boots
 - [ ] paths, NRO name, title ID and the relaunch target per XBE in `switch_platform.cpp`
 - [ ] Switch build with `null`: memory mapping, threads, files and logs work on hardware
 - [ ] take over the Vulkan backend (`gpu_vk.cpp`, `vk_device.*`, `gpu_common.*`); first on a PC with RADV, then NVK
@@ -323,5 +323,5 @@ its frame rate; the clocks, the screen and the GPU drain it (~25% an hour).
 
 **What saves time next time:** skip GL and start with NVK, take the relaunch logic from here as it is, and set the
 audio buffer size, the write cursor and the mixer's pacing right from the start. Those were the longest detours
-here. For performance, build the profiler before guessing: in SCDA the first guess (thread placement) gave little,
+here. For performance, build the profiler before guessing: in SCPT the first guess (thread placement) gave little,
 and the measured ones (state hand-over, heap calls, `-O3`) gave the rest.

@@ -4,7 +4,7 @@ Pandora Tomorrow, as a static recompilation. It renders through Vulkan on mesa-s
 which serves as its test bed.
 
 It starts from [scct-nx](https://github.com/itouchdennis/scct-nx) (Chaos Theory), which starts from
-[scda-nx](https://github.com/itouchdennis/scda-nx) (Double Agent). The recompiler, the Xbox kernel and XDK
+[scpt-nx](https://github.com/itouchdennis/scpt-nx) (Double Agent). The recompiler, the Xbox kernel and XDK
 reimplementation, the Vulkan renderer on NVK and the Switch layer all come from there. Pandora Tomorrow was built with
 an older Xbox SDK (XDK 1.0.5788, the other two 1.0.5849), so its XDK functions were found anew: by the XDK's own
 `.XTLID` table, masked signatures with their neighbours, the call graph and instruction similarity against the other
@@ -67,7 +67,7 @@ made there. [docs/HOW_TO_BUILD.md](docs/HOW_TO_BUILD.md) is the step-by-step gui
 
 Then copy `out/switch` onto the root of your SD card and start **Splinter Cell: Pandora Tomorrow** from the Homebrew
 Menu with title takeover (hold R while starting any game). Everything lives in `sdmc:/switch/scpt/`, apart from
-Chaos Theory's `sdmc:/switch/scct/` and Double Agent's `sdmc:/switch/scda/`.
+Chaos Theory's `sdmc:/switch/scct/` and Double Agent's `sdmc:/switch/scpt/`.
 
 ## The easy way without Docker: one command (Arch Linux)
 `build-nro.sh` does every step below by itself: it installs what is missing (asking for your password), sets up
@@ -178,8 +178,8 @@ for it, so the controller's turn is sent as the stick tilt that turns the view a
 
 ### On Linux
 The same sources build a Linux executable, the quick test bed: `cmake -S . -B build/linux-vk -G Ninja
--DCMAKE_BUILD_TYPE=Release -DSCDA_GPU=vk && ninja -C build/linux-vk`, with the extracted disc in `assets/`. It
-recompiles `Offline.xbe` itself; the relaunch into a mission runs a `scpt` executable beside `scda` (a symlink is
+-DCMAKE_BUILD_TYPE=Release -DSCPT_GPU=vk && ninja -C build/linux-vk`, with the extracted disc in `assets/`. It
+recompiles `Offline.xbe` itself; the relaunch into a mission runs a `scpt` executable beside `scpt` (a symlink is
 enough). Settings are in `scpt.toml` beside the executable; `pause_on_focus_loss = false` keeps it running when its
 window has no focus. The keyboard plays as in Chaos Theory's port, the mouse turns the view.
 
@@ -193,7 +193,7 @@ tested and recommended: CPU 1428, GPU 460, memory 1600 MHz.
 
 ## Credits
 The recompilation approach, the Xbox kernel and XDK reimplementation and the renderer come from the
-[SCDA-XBERecomp](https://github.com/TGP482/SCDA-XBERecomp) project by TGP482 and Joshhhuaaa, made with the
+[SCPT-XBERecomp](https://github.com/TGP482/SCPT-XBERecomp) project by TGP482 and Joshhhuaaa, made with the
 [Xbox XBE Recomp](https://github.com/TGP482/XboxXBE-Recomp) tool, under the MIT license (see [LICENSE](LICENSE)). The
-Linux and Switch ports it builds on are [scda-nx](https://github.com/itouchdennis/scda-nx) and
+Linux and Switch ports it builds on are [scpt-nx](https://github.com/itouchdennis/scpt-nx) and
 [scct-nx](https://github.com/itouchdennis/scct-nx). Please report Pandora Tomorrow's issues here, not upstream.

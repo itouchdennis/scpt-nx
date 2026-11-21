@@ -125,8 +125,8 @@ BOOL ClipCursor(const RECT* r);  // null frees the mouse, a rect captures it (re
 inline BOOL RegisterRawInputDevices(const RAWINPUTDEVICE*, UINT, UINT) { return 1; }
 // handle: the RAWINPUT the event loop passed to input::OnRawInput
 UINT GetRawInputData(HRAWINPUT handle, UINT command, void* data, UINT* size, UINT header_size);
-#ifndef SCDA_SLEEP_DEFINED
-#define SCDA_SLEEP_DEFINED
+#ifndef SCPT_SLEEP_DEFINED
+#define SCPT_SLEEP_DEFINED
 inline void Sleep(DWORD ms) { std::this_thread::sleep_for(std::chrono::milliseconds(ms)); }
 #endif
 inline int _stricmp(const char* a, const char* b) { return strcasecmp(a, b); }

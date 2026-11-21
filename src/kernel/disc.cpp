@@ -88,14 +88,14 @@ Disc::~Disc() {
 // pread carries its own position, so threads reading at once do not queue on one descriptor; the Switch's newlib has
 // none, so there a seek and a read go together under a lock (the extracted disc is the usual case there anyway)
 uint32_t Disc::ReadAt(uint64_t at, void* out, uint32_t len) const {
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     static std::mutex lock;
     std::lock_guard hold(lock);
     if (lseek(Fd(file_), off_t(at), SEEK_SET) < 0) return 0;
 #endif
     uint32_t got = 0;
     while (got < len) {
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
         ssize_t n = read(Fd(file_), static_cast<uint8_t*>(out) + got, len - got);
 #else
         ssize_t n = pread(Fd(file_), static_cast<uint8_t*>(out) + got, len - got, off_t(at + got));

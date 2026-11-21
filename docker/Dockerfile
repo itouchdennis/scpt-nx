@@ -48,7 +48,7 @@ RUN git clone -q --depth 1 --branch 15.4.0 https://github.com/KhronosGroup/glsla
 
 # this repository, and the recompiler built from it
 COPY . /opt/scpt
-RUN cmake -S /opt/scpt -B /opt/scpt/build/host-tools -G Ninja -DCMAKE_BUILD_TYPE=Release -DSCDA_GPU=null >/dev/null && \
+RUN cmake -S /opt/scpt -B /opt/scpt/build/host-tools -G Ninja -DCMAKE_BUILD_TYPE=Release -DSCPT_GPU=null >/dev/null && \
     ninja -C /opt/scpt/build/host-tools xbe_recomp && \
     install -m755 /opt/scpt/build/host-tools/xbe_recomp /usr/local/bin/ && rm -rf /opt/scpt/build && \
     chmod -R a+rX /opt/scpt
