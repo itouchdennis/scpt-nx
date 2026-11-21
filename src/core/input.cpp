@@ -38,8 +38,10 @@
 
 namespace input {
 
-// the mouse as the right stick where the title has no mouse code of its own (below)
+// the mouse as the right stick where the title has no mouse code of its own, the gyro where it has no look code
+// (below)
 void MouseStick(Pad& p);
+void GyroStick(Pad& p);
 
 namespace {
 
@@ -1239,6 +1241,40 @@ void MouseStick(Pad& p) {
     if (dy != 0.0f) p.ry = tilt(-dy);  // the mouse's y is down, the stick's up
 }
 
+// Pandora Tomorrow has no game side look code: the gyro turns the right stick. Measured there, full tilt turns the
+// view 147 degrees a second, a quarter tilt not at all and half a third of that: a dead zone of a quarter, then a
+// rate linear in the tilt. The gyro's rate since the last poll is set as the tilt that turns as fast.
+constexpr bool kGyroStick = std::string_view(IMAGE_XBE) == "Offline.xbe";
+constexpr float kStickFullDegrees = 147.0f;  // a second at full tilt
+constexpr float kStickDeadZone = 0.25f;
+void GyroStick(Pad& p) {
+    if (!kGyroStick || !app::Get().gyro.enabled) return;
+    using clock = std::chrono::steady_clock;
+    // polls closer than this reuse the last tilt: a frame that reads the pad twice keeps the gyro in both
+    constexpr float kMinPoll = 0.008f;
+    static clock::time_point last;
+    static float vx = 0.0f, vy = 0.0f;
+    clock::time_point now = clock::now();
+    float dt = std::chrono::duration<float>(now - last).count();
+    if (dt >= kMinPoll) {
+        last = now;
+        gyro::Turn t = gyro::Take(app::Get().gyro);
+        auto tilt = [&](float degrees) {
+            float rate = dt > 0.1f ? 0.0f : degrees / dt / kStickFullDegrees;
+            if (std::fabs(rate) < 1e-3f) return 0.0f;
+            return std::copysign(kStickDeadZone + (1.0f - kStickDeadZone) * std::min(std::fabs(rate), 1.0f), rate);
+        };
+        vx = tilt(-t.yaw);    // yaw left positive, the stick right
+        vy = tilt(-t.pitch);  // pitch down positive, the stick up
+    }
+    // added to the right stick, which may be held too
+    auto add = [](int16_t stick, float v) {
+        return v == 0.0f ? stick : int16_t(std::clamp(float(stick) / kStickMax + v, -1.0f, 1.0f) * kStickMax);
+    };
+    p.rx = add(p.rx, vx);
+    p.ry = add(p.ry, vy);
+}
+
 void SetTitleScreen(bool title) { g_title = title; }
 
 void SetPauseMenu(bool pause) { g_pause_menu = pause; }
@@ -1793,6 +1829,7 @@ Pad Poll(int port) {
         FillFromXInput(g, p);
         Rebind(p, port, slot, g.wButtons);
         if (keyboard) NotePadHeld(p);
+        if (port == 0) GyroStick(p);
     }
     // a motor the game left running when the keyboard took over, the game may not set it again
     if (keyboard && g_rumbling && KeyboardLast()) {
