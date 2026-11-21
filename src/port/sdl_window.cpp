@@ -218,6 +218,7 @@ void HandleEvent(const SDL_Event& e) {
     switch (e.type) {
         case SDL_QUIT: g_quit = true; break;
         case SDL_KEYDOWN:
+            if (e.key.keysym.scancode == SDL_SCANCODE_F9 && !e.key.repeat) gpu::g_trace_request = true;
             port::OverlayKey(e.key.keysym.scancode, true);
             OnKey(e.key);
             break;

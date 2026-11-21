@@ -115,6 +115,40 @@ VkSamplerAddressMode Address(uint32_t v) {
     }
 }
 
+// the frame SCDA_DRAW_TRACE names, or the one after F9 was pressed
+std::atomic<uint64_t> g_trace_frame{[] {
+    const char* e = std::getenv("SCDA_DRAW_TRACE");
+    return e ? std::strtoull(e, nullptr, 10) : 0ull;
+}()};
+
+// diagnostic dumps: BGRA rows of pitch bytes into <base>.ppm and, with alpha, <base>_alpha.pgm
+void WriteDump(const char* base, uint32_t w, uint32_t h, const std::vector<uint8_t>& px, uint32_t pitch, bool alpha) {
+    std::filesystem::create_directories("dumps");
+    std::string name = std::string(base) + ".ppm";
+    if (FILE* f = std::fopen(name.c_str(), "wb")) {
+        std::fprintf(f, "P6\n%u %u\n255\n", w, h);
+        for (uint32_t y = 0; y < h; y++)
+            for (uint32_t x = 0; x < w; x++) {
+                size_t i = size_t(y) * pitch + x * 4;
+                uint8_t rgb[3] = {0, 0, 0};
+                if (i + 3 < px.size()) rgb[0] = px[i + 2], rgb[1] = px[i + 1], rgb[2] = px[i];
+                std::fwrite(rgb, 1, 3, f);
+            }
+        std::fclose(f);
+    }
+    if (!alpha) return;
+    name = std::string(base) + "_alpha.pgm";
+    if (FILE* f = std::fopen(name.c_str(), "wb")) {
+        std::fprintf(f, "P5\n%u %u\n255\n", w, h);
+        for (uint32_t y = 0; y < h; y++)
+            for (uint32_t x = 0; x < w; x++) {
+                size_t i = size_t(y) * pitch + x * 4 + 3;
+                std::fputc(i < px.size() ? px[i] : 0, f);
+            }
+        std::fclose(f);
+    }
+}
+
 constexpr VkFormat kColourFormat = VK_FORMAT_B8G8R8A8_UNORM;  // guest memory's byte order: Sync copies it as it is
 
 // the overlay (port/overlay.h): ImGui's vertices in pixels, its font's alpha times their colour
@@ -2093,8 +2127,7 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
         const char* e = std::getenv("SCDA_DUMP_BEFORE");
         return e ? std::strtoull(e, nullptr, 16) : 0ull;
     }();
-    if (const char* e = std::getenv("SCDA_DRAW_TRACE");
-        dump_before && sh.pkey == dump_before && e && presents_ == std::strtoull(e, nullptr, 10)) {
+    if (dump_before && sh.pkey == dump_before && presents_ == g_trace_frame) {
         static bool done = false;
         if (!done) {
             done = true;
@@ -2122,18 +2155,38 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
     }();
     if (skip_pkey && sh.pkey == skip_pkey) return;
     // diagnostic: SCDA_DRAW_TRACE=n logs every draw of the n-th presented frame, its shaders and inputs
-    static const uint64_t trace_frame = [] {
-        const char* e = std::getenv("SCDA_DRAW_TRACE");
-        return e ? std::strtoull(e, nullptr, 10) : 0ull;
-    }();
-    if (trace_frame && presents_ == trace_frame) {
+    if (uint64_t trace_frame = g_trace_frame; trace_frame && presents_ == trace_frame) {
+        // what was dumped once, anew for every traced frame (F9 can trace several in one run)
+        static std::vector<uint32_t> dumped, sampled;
+        static std::vector<uint64_t> shown, shown_vs;
+        static uint64_t dumped_frame = 0;
+        if (dumped_frame != trace_frame) {
+            dumped_frame = trace_frame;
+            dumped.clear();
+            sampled.clear();
+            shown.clear();
+            shown_vs.clear();
+        }
+        uint64_t idx_in_frame = draws_ - frame_first;
         std::string tex;
         for (int i = 0; i < 4; i++) {
             TextureDesc d;
             if (!s.textures[size_t(i)] || !Describe(s.textures[size_t(i)], d)) continue;
             char b[96];
+            // a render target as the draw samples it, once per frame: dumps/samp_<draw>_<addr>_<w>x<h>
+            auto rt = std::find_if(targets_.begin(), targets_.end(),
+                                   [&](const auto& kv) { return kv.second.data == d.data && !kv.second.depth; });
+            if (rt != targets_.end() && std::find(sampled.begin(), sampled.end(), d.data) == sampled.end()) {
+                sampled.push_back(d.data);
+                std::vector<uint8_t> px;
+                if (ReadTarget(rt->second, px)) {
+                    char name[80];
+                    std::snprintf(name, sizeof(name), "dumps/samp_%03llu_%08X_%ux%u", (unsigned long long)idx_in_frame,
+                                  d.data, rt->second.gw, rt->second.gh);
+                    WriteDump(name, rt->second.gw, rt->second.gh, px, rt->second.gw * 4, true);
+                }
+            }
             // the texture as the renderer decodes it, once: dumps/tex_<addr>_<w>x<h>.ppm
-            static std::vector<uint32_t> dumped;
             const FormatInfo& tf = Format(d.format);
             if (!tf.compressed && !tf.depth && tf.host == Host::BGRA8 &&
                 std::find(dumped.begin(), dumped.end(), d.data) == dumped.end()) {
@@ -2141,19 +2194,9 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
                 std::vector<uint8_t> px;
                 uint32_t pitch;
                 DecodeLevel(d, 0, 0, static_cast<const uint8_t*>(kernel::HostPtr(d.data)), nullptr, px, pitch);
-                std::filesystem::create_directories("dumps");
                 char name[64];
-                std::snprintf(name, sizeof(name), "dumps/tex_%08X_%ux%u.ppm", d.data, d.width, d.height);
-                if (FILE* f = std::fopen(name, "wb")) {
-                    std::fprintf(f, "P6\n%u %u\n255\n", d.width, d.height);
-                    for (uint32_t y = 0; y < d.height; y++)
-                        for (uint32_t x = 0; x < d.width && size_t(y) * pitch + x * 4 + 3 < px.size(); x++) {
-                            const uint8_t* q = &px[size_t(y) * pitch + x * 4];
-                            uint8_t rgb[3] = {q[2], q[1], q[0]};
-                            std::fwrite(rgb, 1, 3, f);
-                        }
-                    std::fclose(f);
-                }
+                std::snprintf(name, sizeof(name), "dumps/tex_%08X_%ux%u", d.data, d.width, d.height);
+                WriteDump(name, d.width, d.height, px, pitch, true);
             }
             const auto& t = s.tss[size_t(i)];
             std::snprintf(b, sizeof(b), " t%d=%s %ux%u@%08X op%u(%X,%X)/%u(%X,%X)", i, Format(d.format).name,
@@ -2283,8 +2326,30 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
             }
             LOGI("trace   ps constants:%s", pcs.c_str());
         }
+        // a vertex program, once a frame, with the constants of its first draw
+        if (sh.prog && std::find(shown_vs.begin(), shown_vs.end(), sh.vkey) == shown_vs.end()) {
+            shown_vs.push_back(sh.vkey);
+            std::filesystem::create_directories("dumps");
+            char name[80];
+            std::snprintf(name, sizeof(name), "dumps/vs_%016llX.hlsl", (unsigned long long)sh.vkey);
+            if (FILE* f = std::fopen(name, "w")) {
+                std::string h = VertexHlsl(s, a, sh);
+                std::fwrite(h.data(), 1, h.size(), f);
+                std::fclose(f);
+            }
+            std::snprintf(name, sizeof(name), "dumps/vsc_%03llu_%016llX.txt", (unsigned long long)idx_in_frame,
+                          (unsigned long long)sh.vkey);
+            if (FILE* f = std::fopen(name, "w")) {
+                for (size_t r = 0; r < s.vsc.size(); r++) {
+                    const auto& c = s.vsc[r];
+                    if (c[0] || c[1] || c[2] || c[3])
+                        std::fprintf(f, "c%d (hw %zu): %g %g %g %g\n", int(r) - 96, r, double(c[0]), double(c[1]),
+                                     double(c[2]), double(c[3]));
+                }
+                std::fclose(f);
+            }
+        }
         {
-            static std::vector<uint64_t> shown;
             if (std::find(shown.begin(), shown.end(), sh.pkey) == shown.end()) {
                 shown.push_back(sh.pkey);
                 std::filesystem::create_directories("dumps");
@@ -2388,6 +2453,16 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
             fn.vkCmdDraw(Cmd(), a.draw_count, 1, 0, 0);
         }
     }
+    // diagnostic: in a traced frame, the colour target after each draw into it: dumps/step_<draw>_<addr>.ppm
+    if (g_trace_frame && presents_ == g_trace_frame && bound_rt_ && !bound_rt_->depth) {
+        std::vector<uint8_t> px;
+        if (ReadTarget(*bound_rt_, px)) {
+            char name[64];
+            std::snprintf(name, sizeof(name), "dumps/step_%03llu_%08X", (unsigned long long)(draws_ - frame_first),
+                          bound_rt_->data);
+            WriteDump(name, bound_rt_->gw, bound_rt_->gh, px, bound_rt_->gw * 4, false);
+        }
+    }
 }
 
 void VkBackend::ClearTargets(Target* rt, Target* ds, const State& s, uint32_t count, const uint8_t* rects,
@@ -2444,7 +2519,7 @@ void VkBackend::ClearTargets(Target* rt, Target* ds, const State& s, uint32_t co
 void VkBackend::Clear(const State& s, uint32_t count, const uint8_t* rects, uint32_t flags, uint32_t color, float z,
                       uint32_t stencil) {
     auto timed = Time(kClear);
-    if (const char* e = std::getenv("SCDA_DRAW_TRACE"); e && presents_ == std::strtoull(e, nullptr, 10))
+    if (g_trace_frame && presents_ == g_trace_frame)
     {
         TextureDesc rd{};
         bool have = s.rt.header && Describe(s.rt.header, rd);
@@ -2460,7 +2535,7 @@ void VkBackend::Clear(const State& s, uint32_t count, const uint8_t* rects, uint
 void VkBackend::Copy(const Surface& src, const Surface& dst, uint32_t count, uint32_t src_rects,
                      uint32_t dst_points) {
     auto timed = Time(kCopy);
-    if (const char* e = std::getenv("SCDA_DRAW_TRACE"); e && presents_ == std::strtoull(e, nullptr, 10)) {
+    if (g_trace_frame && presents_ == g_trace_frame) {
         GuestRect r0 = count && src_rects ? ReadGuestRect(src_rects, 0) : GuestRect{};
         LOGI("trace copy (%llu draws): %08X -> %08X, %u rects, first %d,%d-%d,%d", (unsigned long long)draws_,
              src.data, dst.data, count, r0.left, r0.top, r0.right, r0.bottom);
@@ -3050,7 +3125,7 @@ void VkBackend::Present(const Surface& front, bool pillarbox) {
         frames_.pop_front();
     }
     // diagnostic: with SCDA_DRAW_TRACE=n, every colour target at the end of frame n into dumps/<addr>_<w>x<h>.ppm
-    if (const char* e = std::getenv("SCDA_DRAW_TRACE"); e && presents_ == std::strtoull(e, nullptr, 10)) {
+    if (g_trace_frame && presents_ == g_trace_frame) {
         std::filesystem::create_directories("dumps");
         for (auto& [key, t] : targets_) {
             std::vector<uint8_t> px;
@@ -3075,6 +3150,12 @@ void VkBackend::Present(const Surface& front, bool pillarbox) {
         LOGI("trace: %zu targets dumped", targets_.size());
     }
     presents_++;
+    if (gpu::g_trace_request.exchange(false)) {
+        std::error_code ec;
+        std::filesystem::remove_all("dumps", ec);
+        g_trace_frame = presents_;
+        LOGI("trace: frame %llu on request", (unsigned long long)presents_);
+    }
     if (presents_ == 1) port::Breadcrumb("first frame");
     presents_seen_.store(presents_);
     Poll();
