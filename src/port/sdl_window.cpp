@@ -218,6 +218,7 @@ void ApplyNow() {
     app::g_display_applied++;
 }
 
+#ifndef __SWITCH__
 // diagnostic: F11 writes the title's memory to guest_<va>.bin in the working directory (user range and the
 // contiguous one), unmapped pages as zeros
 void DumpGuestMemory() {
@@ -236,13 +237,16 @@ void DumpGuestMemory() {
     }
     LOGI("debug: guest memory dumped");
 }
+#endif
 
 void HandleEvent(const SDL_Event& e) {
     switch (e.type) {
         case SDL_QUIT: g_quit = true; break;
         case SDL_KEYDOWN:
             if (e.key.keysym.scancode == SDL_SCANCODE_F9 && !e.key.repeat) gpu::g_trace_request = true;
+#ifndef __SWITCH__
             if (e.key.keysym.scancode == SDL_SCANCODE_F11 && !e.key.repeat) DumpGuestMemory();
+#endif
             port::OverlayKey(e.key.keysym.scancode, true);
             OnKey(e.key);
             break;
