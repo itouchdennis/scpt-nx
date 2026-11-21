@@ -70,6 +70,8 @@ struct Settings {
     bool profiling = false;          // the Switch's perf diagnostics, with a log of measurements alone if logging is
                                      // off; scda.toml only
     bool async_shaders = true;       // a draw whose pipeline needs compiling is skipped until the build threads have it; scda.toml only
+    uint32_t shader_wait_ms = 50;    // with async_shaders: per frame, how long draws wait for their builds before one is
+                                     // skipped (a character vanished for a frame or two); scda.toml only
     bool custom_textures = true;     // images in textures\replacement\ beside the exe replace the game's
     bool dump_textures = false;      // each texture once into textures\dumps\ beside the exe
     uint32_t texture_dump_format = 0;  // 0 PNG, 1 DDS

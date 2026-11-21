@@ -393,6 +393,7 @@ private:
     void CreateBlit();
     // the build threads done with these, their objects looked up
     void Await(std::initializer_list<Resolved*> shaders);
+    bool AwaitBudget(Resolved* vs, Resolved* ps);
     // the full screen state of the present and post passes: one triangle, nothing tested or blended
     void PostState(const VkViewport& vp, const VkRect2D& sc, const float constants[4]);
     // a full screen pass into out (w x h): b1 the params, t0 to t2 the views (a dummy where null), s0 linear, s1 point
@@ -588,6 +589,7 @@ private:
     uint32_t fps_n_ = 0;
     std::chrono::steady_clock::time_point fps_t_ = std::chrono::steady_clock::now();
     uint64_t draws_ = 0, last_draws_ = 0, last_presents_ = 0, skipped_ = 0;
+    uint64_t frame_wait_ns_ = 0;  // this frame's waits for shader builds (AwaitBudget)
     std::chrono::steady_clock::time_point log_t_ = std::chrono::steady_clock::now();
     uint64_t log_cpu_ = 0;  // the render thread's CPU time at log_t_
 
@@ -1239,7 +1241,7 @@ void VkBackend::Request(Resolved& r, std::string hlsl, vk::Stage stage, const ch
         b.entry = entry;
         if (app::Get().async_shaders) {
             jobs_.push_front({r.hash, std::move(hlsl)});
-            build_cv_.notify_one();
+            build_cv_.notify_all();  // all: a draw may be waiting on it too (AwaitBudget)
         } else {
             lock.unlock();
             Built made;
@@ -1309,6 +1311,27 @@ void VkBackend::Await(std::initializer_list<Resolved*> shaders) {
         lock.unlock();
         Lookup(*r);
     }
+}
+
+// a draw's shaders still building: waited for while this frame's wait budget (shader_wait_ms) lasts, true when both
+// are there then. A compile takes a few frames; skipping the draw meanwhile made characters blink out.
+bool VkBackend::AwaitBudget(Resolved* vs, Resolved* ps) {
+    using namespace std::chrono;
+    auto budget = milliseconds(app::Get().shader_wait_ms) - nanoseconds(frame_wait_ns_);
+    if (budget <= nanoseconds(0)) return false;
+    auto start = steady_clock::now(), until = start + budget;
+    for (Resolved* r : {vs, ps}) {
+        if (r->obj || !r->hash) continue;
+        std::unique_lock lock(build_lock_);
+        build_cv_.wait_until(lock, until, [&] {
+            auto it = built_.find(r->hash);
+            return it == built_.end() || it->second.state != Built::kBuilding;
+        });
+        lock.unlock();
+        Lookup(*r);
+    }
+    frame_wait_ns_ += uint64_t(duration_cast<nanoseconds>(steady_clock::now() - start).count());
+    return vs->obj && ps->obj;
 }
 
 void VkBackend::PostState(const VkViewport& vp, const VkRect2D& sc, const float constants[4]) {
@@ -2076,7 +2099,7 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
             auto* g = static_cast<PixelGen*>(p);
             return g->out = PixelHlsl(g->pk);
         }, &pg);
-        if (!vs->obj || !ps->obj) {
+        if ((!vs->obj || !ps->obj) && !AwaitBudget(const_cast<Resolved*>(vs), const_cast<Resolved*>(ps))) {
             skipped_++;
             return;
         }
@@ -3187,6 +3210,7 @@ void VkBackend::Present(const Surface& front, bool pillarbox) {
         LOGI("trace: %zu targets dumped", targets_.size());
     }
     presents_++;
+    frame_wait_ns_ = 0;
     if (gpu::g_trace_request.exchange(false)) {
         std::error_code ec;
         std::filesystem::remove_all("dumps", ec);
