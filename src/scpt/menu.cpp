@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "app/app.h"
+#include "app/translations.h"
 #include "core/log.h"
 #include "game/console.h"
 #include "kernel/memory.h"
@@ -29,7 +30,6 @@ using namespace kernel;
 namespace {
 
 constexpr char16_t kRecompKey[] = u"RECOMPOPTIONS";  // the button's and the page title's caption
-constexpr char16_t kRecompText[] = u"RECOMP OPTIONS";
 constexpr float kButtonStep = 30.0f;  // the pause page's buttons stand 30 apart
 
 // the settings page's list: slots from kListTop, kSlotStep apart, labels left, values right (the GUI's 640 x 480)
@@ -107,9 +107,17 @@ float F(uint32_t a) {
 }
 void SetF(uint32_t a, float v) { std::memcpy(HostPtr(a), &v, 4); }
 
-void PutText(uint32_t buffer, const std::string& text) {
+// in the game's language, in capitals as its menus' entries (the F10 panel's phrases, translations.cpp)
+std::u16string Text(std::string_view text) {
+    std::u16string t = app::Translate(text, [](std::string_view s) { return std::string(s); });
+    for (char16_t& c : t)
+        if ((c >= u'a' && c <= u'z') || (c >= 0xE0 && c <= 0xFE && c != 0xF7)) c = char16_t(c - 0x20);
+    return t;
+}
+
+void PutText(uint32_t buffer, std::u16string_view text) {
     size_t n = std::min(text.size(), kTextChars - 1);
-    for (size_t i = 0; i < n; i++) W16(buffer + uint32_t(i) * 2, uint16_t(uint8_t(text[i])));
+    std::memcpy(HostPtr(buffer), text.data(), n * 2);
     W16(buffer + uint32_t(n) * 2, 0);
 }
 
@@ -222,15 +230,14 @@ void Show(X86Context& ctx) {
     if (g_set.cursor == g_set.first + 1 && g_set.first > 0 && IsHeading(g_set.first - 1)) g_set.first--;
     for (int s = 0; s < kSlots; s++) {
         int i = g_set.first + s;
-        std::string label, value;
+        std::u16string label, value;
         if (i < n) {
             const app::rows::Row& r = *g_set.list[size_t(i)].row;
             if (r.kind == app::rows::Kind::Heading) {
-                label = std::string("- ") + r.label + " -";
+                label = u"- " + Text(r.label) + u" -";
             } else {
-                label = r.label;
-                value = app::rows::Value(r);
-                if (!app::rows::Enabled(r)) value = "-";
+                label = Text(r.label);
+                value = app::rows::Enabled(r) ? Text(app::rows::Value(r)) : u"-";
             }
         }
         PutText(g_label_text[s], label);
@@ -375,8 +382,8 @@ X86_FUNC(GUEST(Engine_Localize)) {
         static uint32_t recomp = 0;
         if (std::memcmp(HostPtr(key), kRecompKey, sizeof(kRecompKey)) == 0) {
             if (!recomp) {
-                recomp = mem::AllocSystem(sizeof(kRecompText));
-                std::memcpy(HostPtr(recomp), kRecompText, sizeof(kRecompText));
+                recomp = mem::AllocSystem(kTextChars * 2);
+                PutText(recomp, Text("RECOMP OPTIONS"));
             }
             kernel::Return(ctx, recomp, 0);
             return;

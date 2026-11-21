@@ -950,8 +950,15 @@ KERNEL_EXPORT(37, FscSetCacheSize, 1) { return kSuccess; }
 
 // settings and hardware
 
-// widescreen (a 4:3 output plays the console's 4:3), 480p
-static uint32_t VideoFlags() { return (app::Widescreen() ? 0x00010000 : 0) | 0x00080000; }
+// Pandora Tomorrow plays German and Italian only on a PAL console (the European release): for those the console is
+// PAL, with PAL60 so the game keeps 60 Hz; for the others NTSC-M as before
+static bool PalConsole() { return app::BootLanguage() == "deu" || app::BootLanguage() == "ita"; }
+static uint32_t AvRegion() { return PalConsole() ? 0x00800300 : 0x00400100; }  // PAL-I or NTSC-M
+
+// widescreen (a 4:3 output plays the console's 4:3), 480p, PAL60 on a PAL console
+static uint32_t VideoFlags() {
+    return (app::Widescreen() ? 0x00010000 : 0) | 0x00080000 | (PalConsole() ? 0x00400000 : 0);
+}
 
 // XC_LANGUAGE ids, which the game turns back into its folder names
 static uint32_t Language() {
@@ -968,7 +975,7 @@ KERNEL_EXPORT(24, ExQueryNonVolatileSetting, 5) {
         case 7: v = Language(); break;             // XC_LANGUAGE
         case 8: v = VideoFlags(); break;          // XC_VIDEO_FLAGS
         case 9: v = 0; break;                      // XC_AUDIO_FLAGS stereo
-        case 0x103: v = 0x00400100; break;         // XC_FACTORY_AV_REGION NTSC-M
+        case 0x103: v = AvRegion(); break;         // XC_FACTORY_AV_REGION
         case 0x104: v = 1; break;                  // XC_FACTORY_GAME_REGION north america
         case 0x12: v = 1; break;                   // XC_DVD_REGION
         default: break;
@@ -981,7 +988,7 @@ KERNEL_EXPORT(24, ExQueryNonVolatileSetting, 5) {
             W32(value + 0xE8, Language());            // language
             W32(value + 0xEC, VideoFlags());          // video flags
             W32(value + 0xF0, 0);                     // audio flags, stereo
-            W32(value + 0x58, 0x00400100);            // factory video standard
+            W32(value + 0x58, AvRegion());            // factory video standard
             W32(value + 0x2C, 1);                     // factory game region
         }
         if (result_len) W32(result_len, 0x100);

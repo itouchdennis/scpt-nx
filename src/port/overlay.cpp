@@ -23,7 +23,7 @@ namespace {
 
 // the game draws the frame rate in its own font where the image has the hook for it (Double Agent's Magma pages);
 // elsewhere the overlay does
-constexpr bool kOverlayFps = std::string_view(IMAGE_XBE) == "sc3.xbe";
+constexpr bool kOverlayFps = std::string_view(IMAGE_XBE) == "sc3.xbe" || std::string_view(IMAGE_XBE) == "Offline.xbe";
 
 constexpr WORD kCombo = XINPUT_GAMEPAD_LEFT_SHOULDER | XINPUT_GAMEPAD_RIGHT_SHOULDER | XINPUT_GAMEPAD_DPAD_RIGHT;
 bool g_combo_held = false;  // main thread
