@@ -368,14 +368,15 @@ bool VersusHides(int id) {
 // FMV scale, intros, the shadow and texture options, the mouse and keyboard, co-op
 constexpr bool kSc3 = std::string_view(IMAGE_XBE) == "sc3.xbe";
 // Pandora Tomorrow: no game patches yet, so the rows they carry go (field of view, FMV scale, intros, shadows, co-op,
-// the aim and stick sensitivities, gyro only while aiming); the mouse and the gyro turn it through the right stick
-// (core/input.cpp). The portable builds have no texture dumper.
+// the aim and stick sensitivities, gyro only while aiming) and the player ports: one player on controller 1 or the
+// keyboard, and the RECOMP OPTIONS page had no way back from a port without a controller. The mouse and the gyro
+// turn it through the right stick (core/input.cpp). The portable builds have no texture dumper.
 constexpr bool kScpt = std::string_view(IMAGE_XBE) == "Offline.xbe";
 bool GameHides(int id) {
     if (kScpt)
         return id == kFov || id == kFmvScale || id == kSkipIntros || id == kShadowResolution ||
                id == kShadowDistance || id == kShadowFilter || id == kTickRate || id == kInputDelay ||
-               id == kJoinIp || id == kPlayer2 || id == kAimHorizontal || id == kAimVertical ||
+               id == kJoinIp || id == kPlayer1 || id == kPlayer2 || id == kAimHorizontal || id == kAimVertical ||
                id == kPadHorizontal || id == kPadVertical || id == kPadAimHorizontal || id == kPadAimVertical ||
                id == kGyroAimOnly || id == kTextureReplacement || id == kTextureDumping || id == kDumpFormat;
     if (!kSc3) return false;
