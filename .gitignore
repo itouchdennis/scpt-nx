@@ -13,3 +13,4 @@
 *.xbe
 *.nro
 *.elf
+__pycache__/

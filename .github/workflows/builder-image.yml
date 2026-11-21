@@ -1,9 +1,9 @@
-# Builds the scct-nx builder image (docker/Dockerfile) and publishes it as ghcr.io/<owner>/scct-nx-builder. The image
+# Builds the scpt-nx builder image (docker/Dockerfile) and publishes it as ghcr.io/<owner>/scpt-nx-builder. The image
 # holds the toolchain, the Vulkan driver and this repository's sources only: no game data and no code made from the
 # game ever passes through here. The game is added by each user, on their own computer (build-nro-docker.sh).
 name: builder image
 
-# Its own name, scct-nx-builder: never scda-nx-builder, which Double Agent's builders download.
+# Its own name, scpt-nx-builder: never scda-nx-builder, which Double Agent's builders download.
 on:
   push:
     branches: [main]
@@ -40,7 +40,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Image name
         id: name
-        run: echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/scct-nx-builder" >> "$GITHUB_OUTPUT"
+        run: echo "image=ghcr.io/${GITHUB_REPOSITORY_OWNER,,}/scpt-nx-builder" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
         with:
           context: .

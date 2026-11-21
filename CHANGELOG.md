@@ -2,8 +2,20 @@
 There are no prebuilt NROs in any release: each release holds the source and the build scripts. You build the NRO
 yourself, from your own copy of the game ([docs/HOW_TO_BUILD.md](docs/HOW_TO_BUILD.md)).
 
-scct-nx starts from [scda-nx](https://github.com/itouchdennis/scda-nx) v0.4.9; its changelog has the history of the
-shared code.
+scpt-nx starts from [scct-nx](https://github.com/itouchdennis/scct-nx) v0.3.0, which starts from
+[scda-nx](https://github.com/itouchdennis/scda-nx) v0.4.9; their changelogs have the history of the shared code. The
+entries below v0.1.0 are scct-nx's.
+
+## v0.1.0 (not released yet)
+Pandora Tomorrow's campaign (`Offline.xbe`, XDK 1.0.5788) on Linux and the Switch, into the first mission.
+- The XDK functions found anew for the older SDK; the launcher relaunches `Offline.xbe` for each mission.
+- Rendering: the D3D getters the game reads back (viewport, vertex shader, projection-viewport matrix), visibility
+  tests on occlusion queries, the glow and thermal corner passes, stages without a texture as the console reads
+  them, vertex registers keeping their last value, and the light passes over walls (depth EQUAL) steady.
+- Sound: the stream thread's 10 ms rounds, so speech, music and ambience play at their speed.
+- The settings as an overlay (L + R + D-pad right, F10), on by default; gyro aiming and the mouse through the right
+  stick; draws wait up to 50 ms a frame for their shaders instead of vanishing.
+- F9 on Linux traces a frame with every draw's target, textures and shaders, for debugging.
 
 ## v0.3.0
 The port's settings in the game's own options menu, and gyro aiming.

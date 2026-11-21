@@ -2,25 +2,25 @@
 # The Switch NRO from your own copy of the game, in one command, on Arch Linux:
 #
 #   ./build-nro.sh "/path/to/your game.iso"        (an Xbox disc image: .iso or .xiso)
-#   ./build-nro.sh "/path/to/your extracted disc"   (a folder with sc3.xbe, Default/, Media/)
+#   ./build-nro.sh "/path/to/your extracted disc"   (a folder with Offline.xbe, Offline/, Default/)
 #
 # It installs what is missing (asking for your password through sudo), builds the Switch toolchain's Vulkan driver
-# once, recompiles the game from your sc3.xbe and leaves a folder to copy onto the SD card: out/switch/scpt/.
+# once, recompiles the game from your Offline.xbe and leaves a folder to copy onto the SD card: out/switch/scpt/.
 # Nothing of the game is downloaded or uploaded: everything is made here, from your files, and stays on this machine.
 #
-#   CACHE          where the driver, tools and recompiled code are kept between runs (default ~/.cache/scct-nx)
+#   CACHE          where the driver, tools and recompiled code are kept between runs (default ~/.cache/scpt-nx)
 #   OUT            the SD card folder made (default out/ beside this script)
 #   SCDA_NVK_SDK   a Vulkan driver already built (portlibs/switch with lib/libvulkan.a): skips building it
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-CACHE="${CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/scct-nx}"
+CACHE="${CACHE:-${XDG_CACHE_HOME:-$HOME/.cache}/scpt-nx}"
 OUT="${OUT:-$REPO/out}"
 DEVKITPRO="${DEVKITPRO:-/opt/devkitpro}"
 MESA_URL=https://github.com/danfromtico/mesa-switch.git
 MESA_COMMIT=1a8c1a66d6f  # the mesa-switch the port was tested with
 XISO_URL=https://github.com/XboxDev/extract-xiso.git
-TESTED_XBE_SHA1=591ceeb0ee38e013ea3969ceb0196fe5cfafd891  # sc3.xbe of Chaos Theory (Europe), the release it is made from
+TESTED_XBE_SHA1=4f4cc03705247cd2b4bfc00260ef60b82681ded6  # Offline.xbe of Pandora Tomorrow (Europe), the release it is made from
 
 step() { printf '\n\033[1m== %s\033[0m\n' "$*"; }
 fail() { printf '\n\033[31merror:\033[0m %s\n' "$*" >&2; exit 1; }
@@ -77,7 +77,7 @@ GAME="$DEST/game"
 step "Game files -> $GAME"
 mkdir -p "$GAME"
 if [ -d "$GAME_IN" ]; then
-    [ -f "$GAME_IN/sc3.xbe" ] || fail "$GAME_IN has no sc3.xbe: choose the extracted disc's folder"
+    [ -f "$GAME_IN/Offline.xbe" ] || fail "$GAME_IN has no Offline.xbe: choose the extracted disc's folder"
     rsync -a --info=progress2 --size-only --exclude '*.iso' "$GAME_IN/" "$GAME/"
 else
     if ! command -v extract-xiso >/dev/null && [ ! -x "$CACHE/tools/extract-xiso" ]; then
@@ -90,18 +90,18 @@ else
         cp "$CACHE/src/extract-xiso/build/extract-xiso" "$CACHE/tools/"
     fi
     XISO="$(command -v extract-xiso || echo "$CACHE/tools/extract-xiso")"
-    if [ -f "$GAME/sc3.xbe" ] && [ "$GAME/sc3.xbe" -nt "$GAME_IN" ]; then
+    if [ -f "$GAME/Offline.xbe" ] && [ "$GAME/Offline.xbe" -nt "$GAME_IN" ]; then
         echo "already extracted"
     else
         "$XISO" -s -d "$GAME" -x "$GAME_IN" || fail "$GAME_IN could not be read as an Xbox disc image"
     fi
-    [ -f "$GAME/sc3.xbe" ] || fail "$GAME_IN holds no sc3.xbe: is it the Splinter Cell: Chaos Theory disc?"
+    [ -f "$GAME/Offline.xbe" ] || fail "$GAME_IN holds no Offline.xbe: is it the Splinter Cell: Pandora Tomorrow disc?"
 fi
-XBE_SHA1="$(sha1sum "$GAME/sc3.xbe" | cut -d' ' -f1)"
+XBE_SHA1="$(sha1sum "$GAME/Offline.xbe" | cut -d' ' -f1)"
 if [ "$XBE_SHA1" = "$TESTED_XBE_SHA1" ]; then
-    echo "sc3.xbe: the release the port is made from (Europe)"
+    echo "Offline.xbe: the release the port is made from (Europe)"
 else
-    echo "sc3.xbe: sha1 $XBE_SHA1, not the release this port is made from ($TESTED_XBE_SHA1)."
+    echo "Offline.xbe: sha1 $XBE_SHA1, not the release this port is made from ($TESTED_XBE_SHA1)."
     echo "Another release may not work."
     ask "Build anyway?" || exit 1
 fi
@@ -123,13 +123,13 @@ else
     [ -f "$NVK/lib/libvulkan.a" ] || fail "the Vulkan driver did not build"
 fi
 
-# --- 4. the game's code, recompiled from your sc3.xbe ------------------------------------------------------------------
+# --- 4. the game's code, recompiled from your Offline.xbe --------------------------------------------------------------
 GEN="$CACHE/generated/$XBE_SHA1"
-step "Recompiling sc3.xbe -> $GEN"
-if [ -f "$GEN/image_symbols.h" ] && [ "$GEN/codegen.stamp" -nt "$REPO/config/sc3.toml" ]; then
+step "Recompiling Offline.xbe -> $GEN"
+if [ -f "$GEN/image_symbols.h" ] && [ "$GEN/codegen.stamp" -nt "$REPO/config/scpt.toml" ]; then
     echo "already recompiled"
 else
-    SCDA_XBE="$GAME/sc3.xbe" SCDA_GEN_DIR="$GEN" HOST_BUILD="$CACHE/host-tools" "$REPO/tools/regen.sh"
+    SCDA_XBE="$GAME/Offline.xbe" SCDA_GEN_DIR="$GEN" HOST_BUILD="$CACHE/host-tools" "$REPO/tools/regen.sh"
 fi
 
 # --- 5. the NRO -------------------------------------------------------------------------------------------------------
@@ -139,7 +139,7 @@ SCDA_GEN_DIR="$GEN" SCDA_NVK_SDK="$NVK" SD_ROOT="$OUT" BUILD_DIR="$CACHE/build-s
 
 step "Done"
 echo "Copy the folder $OUT/switch onto the root of your SD card, so that it holds"
-echo "  sdmc:/switch/scpt/scpt.nro and sdmc:/switch/scpt/game/sc3.xbe"
+echo "  sdmc:/switch/scpt/scpt.nro and sdmc:/switch/scpt/game/Offline.xbe"
 echo "and start it from the Homebrew Menu with title takeover: hold R while starting any game."
 echo
 echo "The NRO holds code made from your copy of the game: it is for you only, please do not share it."

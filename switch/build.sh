@@ -14,7 +14,7 @@
 #   STAGE_GAME     1: also copy the extracted disc (SCDA_GAME_SRC, default assets/) into the staging folder; by
 #                  default only the NRO is staged and the disc is copied to the card once by hand
 #   SD_ROOT        staging SD root (default switch_sd/); a scpt.nro already there that differs from the new one is
-#                  moved to <SD_ROOT>/BAK/scct_v<its version>.nro first, beside switch/ so it stays off the card
+#                  moved to <SD_ROOT>/BAK/scpt_v<its version>.nro first, beside switch/ so it stays off the card
 #   BUILD_DIR      default build/switch-vk, build/switch for SCDA_GPU=gl
 #   SCDA_ICON      the NRO's hbmenu icon, a 256x256 JPEG (default switch/icon.jpg when it exists)
 #   SCDA_GPU       vk (default, Vulkan on mesa-switch's NVK), gl (OpenGL on switch-mesa) or null (draws nothing)
