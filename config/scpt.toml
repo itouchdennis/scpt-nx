@@ -57,6 +57,7 @@ D3D_InternalRelease                                  = 0x33AB30
 D3D_KickOffAndWaitForIdle                            = 0x33E550
 D3D_MakeRequestedSpace                               = 0x33E3B0
 D3D_SetFence                                         = 0x33E180
+Engine_Localize                                      = 0x43420
 D3DDevice_Begin                                      = 0x33C480
 D3DDevice_BlockOnFence                               = 0
 D3DDevice_BlockUntilVerticalBlank                    = 0x338D30
@@ -239,6 +240,13 @@ XOnlineStartup                                       = 0x320997
 Engine_FrameTimeMin         = 0
 # the sound stream thread's function: its short sleeps last 10 ms, a round of its decode-ahead (Pandora Tomorrow)
 Sound_StreamThread          = 0x2239F0
+# Unreal Engine 2 (src/scpt/unreal.cpp): the object and name tables, StaticConstructObject, UObject::ProcessEvent,
+# FArray::Realloc
+Engine_GObjects             = 0x4D9018
+Engine_GNames               = 0x4D4F54
+Engine_StaticConstructObject = 0x51E30
+Engine_ProcessEvent         = 0x382A0
+Engine_ArrayRealloc         = 0x42A90
 D3D_DeferredTextureState    = 0x348A40
 D3D_Device                  = 0x348EE0
 D3D_DirtyFlags              = 0x348A38

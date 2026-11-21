@@ -2,6 +2,7 @@
 #include <chrono>
 
 #include "core/input.h"
+#include "game/console.h"
 #include "xdk/hle.h"
 
 using namespace kernel;
@@ -88,6 +89,7 @@ HLE_STDCALL(XInputGetState, 2) {
     }
     input::Pad p = input::Poll(int(port));
     if (!p.connected) return 1167;  // ERROR_DEVICE_NOT_CONNECTED
+    game::MenuPad(int(port), p);
     std::lock_guard<std::mutex> lock(g_ports_lock);
     Handle& h = g_handles[a[0]];
     if (std::memcmp(&p, &h.last, sizeof(p))) h.packet++;

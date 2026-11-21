@@ -19,6 +19,7 @@
 #include <unordered_map>
 
 #include "app/app.h"
+#include "game/console.h"
 #include "gpu/backend.h"
 #include "gpu/texture.h"
 #include "gpu/vertex.h"
@@ -478,6 +479,7 @@ std::atomic<uint32_t> g_presents{0};
 }  // namespace
 
 HLE_STDCALL(D3DDevice_Swap, 1) {
+    game::FrameTick(ctx);
     app::WaitWhileUnfocused();
     app::SplashFirstFrame();
     // handed over from the previous instance: the window opens on the second frame, the first ShowScreen's picture
