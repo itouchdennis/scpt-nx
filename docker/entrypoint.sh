@@ -55,9 +55,9 @@ fi
 
 step "Building the NRO"
 icon=()
-[ -f /icon.jpg ] && icon=(SCDA_ICON=/icon.jpg)
-env "${icon[@]}" SCDA_GEN_DIR="$GEN" SCDA_NVK_SDK="$NVK" SD_ROOT=/out BUILD_DIR=/cache/build-switch-vk \
-    SCDA_CODE_OPT="${SCPT_CODE_OPT:--O3}" /opt/scpt/switch/build.sh
+[ -f /icon.jpg ] && icon=(SCPT_ICON=/icon.jpg)
+env "${icon[@]}" SCPT_GEN_DIR="$GEN" SCPT_NVK_SDK="$NVK" SD_ROOT=/out BUILD_DIR=/cache/build-switch-vk \
+    SCPT_CODE_OPT="${SCPT_CODE_OPT:--O3}" /opt/scpt/switch/build.sh
 [ -f "$DEST/scpt.nro" ] || fail "no NRO was made"
 
 step "Done"

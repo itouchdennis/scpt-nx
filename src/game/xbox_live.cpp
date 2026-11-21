@@ -60,7 +60,7 @@ X86_FUNC(sub_00291D64) {
 // list AddItem (thiscall(text, flag), ret 8, returns the index)
 X86_EXTERN_FUNC(__imp__sub_002C5160);
 X86_FUNC(sub_002C5160) {
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     bool drop = R32(ctx.esp) == kSoloItem || R32(ctx.esp) == kVersusItem;
 #else
     bool drop = R32(ctx.esp) == kSoloItem;

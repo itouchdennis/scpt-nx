@@ -10,7 +10,7 @@
 #
 #   CACHE          where the driver, tools and recompiled code are kept between runs (default ~/.cache/scpt-nx)
 #   OUT            the SD card folder made (default out/ beside this script)
-#   SCDA_NVK_SDK   a Vulkan driver already built (portlibs/switch with lib/libvulkan.a): skips building it
+#   SCPT_NVK_SDK   a Vulkan driver already built (portlibs/switch with lib/libvulkan.a): skips building it
 set -euo pipefail
 
 REPO="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -107,7 +107,7 @@ else
 fi
 
 # --- 3. the Vulkan driver ---------------------------------------------------------------------------------------------
-NVK="${SCDA_NVK_SDK:-$CACHE/nvk-sdk/opt/devkitpro/portlibs/switch}"
+NVK="${SCPT_NVK_SDK:-$CACHE/nvk-sdk/opt/devkitpro/portlibs/switch}"
 step "Vulkan driver (NVK) -> $NVK"
 if [ -f "$NVK/lib/libvulkan.a" ]; then
     echo "already built"
@@ -129,12 +129,12 @@ step "Recompiling Offline.xbe -> $GEN"
 if [ -f "$GEN/image_symbols.h" ] && [ "$GEN/codegen.stamp" -nt "$REPO/config/scpt.toml" ]; then
     echo "already recompiled"
 else
-    SCDA_XBE="$GAME/Offline.xbe" SCDA_GEN_DIR="$GEN" HOST_BUILD="$CACHE/host-tools" "$REPO/tools/regen.sh"
+    SCPT_XBE="$GAME/Offline.xbe" SCPT_GEN_DIR="$GEN" HOST_BUILD="$CACHE/host-tools" "$REPO/tools/regen.sh"
 fi
 
 # --- 5. the NRO -------------------------------------------------------------------------------------------------------
 step "Building the NRO (the first time can take a while, depending on your PC)"
-SCDA_GEN_DIR="$GEN" SCDA_NVK_SDK="$NVK" SD_ROOT="$OUT" BUILD_DIR="$CACHE/build-switch-vk" "$REPO/switch/build.sh"
+SCPT_GEN_DIR="$GEN" SCPT_NVK_SDK="$NVK" SD_ROOT="$OUT" BUILD_DIR="$CACHE/build-switch-vk" "$REPO/switch/build.sh"
 [ -f "$DEST/scpt.nro" ] || fail "no NRO was made"
 
 step "Done"

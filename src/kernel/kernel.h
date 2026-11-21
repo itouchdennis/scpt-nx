@@ -215,7 +215,7 @@ void SetShownPicture(std::string path);
 const std::string& KeptPicture();
 // A relaunch hands over without a gap: the new instance's window opens once it has presented, then it signals this
 // event and the old instance, waiting in Relaunch with its window still up, exits.
-inline std::wstring HandoverEvent(unsigned long process) { return L"Local\\SCDAHandover-" + std::to_wstring(process); }
+inline std::wstring HandoverEvent(unsigned long process) { return L"Local\\SCPTHandover-" + std::to_wstring(process); }
 inline std::atomic<bool> g_relaunching{false};
 
 using KernelFn = void (*)(X86Context& ctx, uint8_t* base);

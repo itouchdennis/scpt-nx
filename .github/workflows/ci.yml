@@ -77,12 +77,12 @@ jobs:
 
   switch:
     runs-on: ubuntu-latest
-    container: ghcr.io/itouchdennis/scda-nx-builder:latest
+    container: ghcr.io/itouchdennis/scpt-nx-builder:latest
     steps:
       - uses: actions/checkout@v4
       - name: Compile
         env:
-          SCDA_NVK_SDK: /opt/nvk-sdk/opt/devkitpro/portlibs/switch
+          SCPT_NVK_SDK: /opt/nvk-sdk/opt/devkitpro/portlibs/switch
         run: |
           git config --global --add safe.directory "$PWD"
           tools/ci/check-build.sh switch vk

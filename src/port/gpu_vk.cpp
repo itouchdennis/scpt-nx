@@ -1,4 +1,4 @@
-// The title's Direct3D 8 calls drawn with Vulkan 1.3 (SCDA_GPU=vk): the PC on its driver (RADV and the like), the
+// The title's Direct3D 8 calls drawn with Vulkan 1.3 (SCPT_GPU=vk): the PC on its driver (RADV and the like), the
 // Switch on mesa-switch's NVK, linked in. It follows gpu/d3d12.cpp draw for draw as gpu_gl.cpp does: the same HLSL
 // from gpu/shaders.cpp, here as SPIR-V straight from vk_shader.cpp, the same constants, targets kept by surface
 // memory, textures by guest address.
@@ -115,9 +115,9 @@ VkSamplerAddressMode Address(uint32_t v) {
     }
 }
 
-// the frame SCDA_DRAW_TRACE names, or the one after F9 was pressed
+// the frame SCPT_DRAW_TRACE names, or the one after F9 was pressed
 std::atomic<uint64_t> g_trace_frame{[] {
-    const char* e = std::getenv("SCDA_DRAW_TRACE");
+    const char* e = std::getenv("SCPT_DRAW_TRACE");
     return e ? std::strtoull(e, nullptr, 10) : 0ull;
 }()};
 
@@ -301,7 +301,7 @@ struct Resolved {
 // streaming memory for vertices, indices, constants and uploads: one host visible buffer in kSegments parts, each
 // waited for before it is written again
 constexpr uint32_t kSegments = 4;
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
 constexpr size_t kRingSize = 32u << 20;
 constexpr int kBuildThreads = 2;
 #else
@@ -616,7 +616,7 @@ bool VkBackend::Init(uint32_t width, uint32_t height) {
     // before any target: the first frames are made at the scale they are shown at
     scale_ = app::RenderScale(guest_h_);
     LOGI("vk: render scale %.3f", scale_);
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     // Mesa's own shader cache on the SD card would keep a second copy of shaders.vkb, with writer threads of its own
     setenv("MESA_SHADER_CACHE_DISABLE", "true", 0);
 #endif
@@ -2117,14 +2117,14 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
             return;
         }
     }
-    // diagnostic: SCDA_DRAW_SKIP=a-b leaves out the draws a to b of every frame (counted from 0 in the frame)
+    // diagnostic: SCPT_DRAW_SKIP=a-b leaves out the draws a to b of every frame (counted from 0 in the frame)
     static uint64_t frame_seen = ~0ull, frame_first = 0;
     if (presents_ != frame_seen) {
         frame_seen = presents_;
         frame_first = draws_;
     }
     static const std::pair<uint64_t, uint64_t> skip = [] {
-        const char* e = std::getenv("SCDA_DRAW_SKIP");
+        const char* e = std::getenv("SCPT_DRAW_SKIP");
         if (!e) return std::pair<uint64_t, uint64_t>{1, 0};
         char* end;
         uint64_t a = std::strtoull(e, &end, 10);
@@ -2132,11 +2132,11 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
         return std::pair<uint64_t, uint64_t>{a, b};
     }();
     if (uint64_t idx = draws_ - frame_first; idx >= skip.first && idx <= skip.second) return;
-    // diagnostic: SCDA_SKIP_COUNT=n,m,... leaves out the draws of n, m, ... vertices (stable between runs, unlike their
+    // diagnostic: SCPT_SKIP_COUNT=n,m,... leaves out the draws of n, m, ... vertices (stable between runs, unlike their
     // place in the frame)
     static const std::vector<uint32_t> skip_counts = [] {
         std::vector<uint32_t> v;
-        if (const char* e = std::getenv("SCDA_SKIP_COUNT"))
+        if (const char* e = std::getenv("SCPT_SKIP_COUNT"))
             for (char* p = const_cast<char*>(e); *p;) {
                 v.push_back(uint32_t(std::strtoul(p, &p, 10)));
                 if (*p == ',') p++;
@@ -2145,10 +2145,10 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
         return v;
     }();
     if (std::find(skip_counts.begin(), skip_counts.end(), count) != skip_counts.end()) return;
-    // diagnostic: SCDA_SKIP_RT=hex,... leaves out the draws into these guest colour targets
+    // diagnostic: SCPT_SKIP_RT=hex,... leaves out the draws into these guest colour targets
     static const std::vector<uint32_t> skip_rts = [] {
         std::vector<uint32_t> v;
-        if (const char* e = std::getenv("SCDA_SKIP_RT"))
+        if (const char* e = std::getenv("SCPT_SKIP_RT"))
             for (char* p = const_cast<char*>(e); *p;) {
                 v.push_back(uint32_t(std::strtoul(p, &p, 16)));
                 if (*p == ',') p++;
@@ -2157,10 +2157,10 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
         return v;
     }();
     if (std::find(skip_rts.begin(), skip_rts.end(), s.rt.data) != skip_rts.end()) return;
-    // diagnostic: SCDA_DUMP_BEFORE=hex pixel key: in the traced frame, every colour target right before the first draw
+    // diagnostic: SCPT_DUMP_BEFORE=hex pixel key: in the traced frame, every colour target right before the first draw
     // with that key into dumps/before_<addr>_<w>x<h>.ppm
     static const uint64_t dump_before = [] {
-        const char* e = std::getenv("SCDA_DUMP_BEFORE");
+        const char* e = std::getenv("SCPT_DUMP_BEFORE");
         return e ? std::strtoull(e, nullptr, 16) : 0ull;
     }();
     if (dump_before && sh.pkey == dump_before && presents_ == g_trace_frame) {
@@ -2184,13 +2184,13 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
             }
         }
     }
-    // diagnostic: SCDA_SKIP_PKEY=hex leaves out the draws with that pixel shader key
+    // diagnostic: SCPT_SKIP_PKEY=hex leaves out the draws with that pixel shader key
     static const uint64_t skip_pkey = [] {
-        const char* e = std::getenv("SCDA_SKIP_PKEY");
+        const char* e = std::getenv("SCPT_SKIP_PKEY");
         return e ? std::strtoull(e, nullptr, 16) : 0ull;
     }();
     if (skip_pkey && sh.pkey == skip_pkey) return;
-    // diagnostic: SCDA_DRAW_TRACE=n logs every draw of the n-th presented frame, its shaders and inputs
+    // diagnostic: SCPT_DRAW_TRACE=n logs every draw of the n-th presented frame, its shaders and inputs
     if (uint64_t trace_frame = g_trace_frame; trace_frame && presents_ == trace_frame) {
         // what was dumped once, anew for every traced frame (F9 can trace several in one run)
         static std::vector<uint32_t> dumped, sampled;
@@ -2823,11 +2823,11 @@ void VkBackend::CountFps() {
     }
 }
 
-// SCDA_SHOT_EVERY=n: every nth frame as shots/frame_<present>.ppm beside the log, for looking at a run without a
+// SCPT_SHOT_EVERY=n: every nth frame as shots/frame_<present>.ppm beside the log, for looking at a run without a
 // screen
 void VkBackend::SaveShot(Target& t) {
     static const uint64_t every = [] {
-        const char* e = std::getenv("SCDA_SHOT_EVERY");
+        const char* e = std::getenv("SCPT_SHOT_EVERY");
         return e ? std::strtoull(e, nullptr, 10) : 0ull;
     }();
     if (!every || presents_ % every) return;
@@ -3197,7 +3197,7 @@ void VkBackend::Present(const Surface& front, bool pillarbox) {
         WaitSerial(frames_.front());
         frames_.pop_front();
     }
-    // diagnostic: with SCDA_DRAW_TRACE=n, every colour target at the end of frame n into dumps/<addr>_<w>x<h>.ppm
+    // diagnostic: with SCPT_DRAW_TRACE=n, every colour target at the end of frame n into dumps/<addr>_<w>x<h>.ppm
     if (g_trace_frame && presents_ == g_trace_frame) {
         std::filesystem::create_directories("dumps");
         for (auto& [key, t] : targets_) {

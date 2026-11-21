@@ -16,7 +16,7 @@
 
 namespace gpu::vk {
 
-#define SCDA_VK_INSTANCE_FUNCS(X)                                                                                     \
+#define SCPT_VK_INSTANCE_FUNCS(X)                                                                                     \
     X(vkDestroyInstance)                                                                                              \
     X(vkEnumeratePhysicalDevices)                                                                                     \
     X(vkGetPhysicalDeviceProperties)                                                                                  \
@@ -34,7 +34,7 @@ namespace gpu::vk {
     X(vkGetPhysicalDeviceSurfaceFormatsKHR)                                                                           \
     X(vkGetPhysicalDeviceSurfacePresentModesKHR)
 
-#define SCDA_VK_DEVICE_FUNCS(X)                                                                                       \
+#define SCPT_VK_DEVICE_FUNCS(X)                                                                                       \
     X(vkDestroyDevice)                                                                                                \
     X(vkGetDeviceQueue)                                                                                               \
     X(vkDeviceWaitIdle)                                                                                               \
@@ -128,8 +128,8 @@ namespace gpu::vk {
 
 struct Funcs {
 #define X(name) PFN_##name name = nullptr;
-    SCDA_VK_INSTANCE_FUNCS(X)
-    SCDA_VK_DEVICE_FUNCS(X)
+    SCPT_VK_INSTANCE_FUNCS(X)
+    SCPT_VK_DEVICE_FUNCS(X)
 #undef X
 };
 extern Funcs fn;

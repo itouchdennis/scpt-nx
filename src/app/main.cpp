@@ -56,7 +56,7 @@ LONG WINAPI WriteCrashDump(EXCEPTION_POINTERS* e) {
     SYSTEMTIME t;
     GetLocalTime(&t);
     wchar_t name[64];
-    swprintf(name, 64, L"SCDA.%04u.%02u.%02u_%02u.%02u.%02u.dmp", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond);
+    swprintf(name, 64, L"SCPT.%04u.%02u.%02u_%02u.%02u.%02u.dmp", t.wYear, t.wMonth, t.wDay, t.wHour, t.wMinute, t.wSecond);
     HANDLE f = CreateFileW((dir / name).c_str(), GENERIC_WRITE, 0, nullptr, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (f == INVALID_HANDLE_VALUE) return EXCEPTION_CONTINUE_SEARCH;
     MINIDUMP_EXCEPTION_INFORMATION info{GetCurrentThreadId(), e, FALSE};
@@ -296,7 +296,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int) {
     SetProcessDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
     // one log a session: a relaunch (front end to mission, story to versus) carries on its predecessor's
     bool relaunched = std::wcsstr(GetCommandLineW(), L"--relaunched") != nullptr;
-    std::string log = app::Instance() > 1 ? "scda-" + std::to_string(app::Instance()) : "scda";
+    std::string log = app::Instance() > 1 ? "scpt-" + std::to_string(app::Instance()) : "scpt";
     logx::Init((app::ExeDir() / "logs").string(), log, relaunched);
     app::Load();
     if (relaunched && !logx::Verbose()) {
@@ -319,7 +319,7 @@ int WINAPI wWinMain(HINSTANCE inst, HINSTANCE, PWSTR, int) {
     wc.hInstance = inst;
     wc.hIcon = LoadIconW(inst, MAKEINTRESOURCEW(1));
     wc.hbrBackground = static_cast<HBRUSH>(GetStockObject(BLACK_BRUSH));
-    wc.lpszClassName = L"SCDA";
+    wc.lpszClassName = L"SCPT";
     RegisterClassExW(&wc);
     app::g_hwnd = CreateWindowExW(0, wc.lpszClassName, L"Tom Clancy's Splinter Cell: Double Agent", WS_POPUP, 0, 0, 1280, 720,
                                   nullptr, nullptr, inst, nullptr);

@@ -678,7 +678,7 @@ KERNEL_EXPORT(202, NtOpenFile, 6) {
 // Horizon must never get guest memory as an IPC buffer: it is code memory there, and the fs service froze the whole
 // console on the save code's small unaligned reads into it (nfsu2-sw). On the Switch reads and writes go through a
 // bounce buffer of this thread's own; elsewhere straight into guest memory.
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
 constexpr size_t kBounce = 256 << 10;
 uint8_t* Bounce() {
     thread_local std::unique_ptr<uint8_t[]> b(new uint8_t[kBounce]);
@@ -741,8 +741,8 @@ KERNEL_EXPORT(219, NtReadFile, 8) {
         s.reads++;
         s.read_bytes += n;
     });
-    // diagnostic: SCDA_TRACE_FILE=part of a name logs every read of the files whose title path holds it
-    static const char* trace = std::getenv("SCDA_TRACE_FILE");
+    // diagnostic: SCPT_TRACE_FILE=part of a name logs every read of the files whose title path holds it
+    static const char* trace = std::getenv("SCPT_TRACE_FILE");
     if (trace && f->xbox.find(trace) != std::string::npos) {
         std::string calls;
         for (uint32_t i = 0; i < 48; i++) {

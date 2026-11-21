@@ -72,10 +72,10 @@ void Fold(const float* in, float* out, uint32_t frames, int channels, bool mono)
         need.assign(kLookAhead, 1.0f);
         at = 0;
     }
-    // SCDA_AUDIO_DUMP=file, or audio_dump in scpt.toml (logs/audio.f32): the fold before the limiter as raw float
+    // SCPT_AUDIO_DUMP=file, or audio_dump in scpt.toml (logs/audio.f32): the fold before the limiter as raw float
     // frames, to measure the mix; appended across relaunches, flushed once a second (each flush an SD card write)
     static FILE* dump = [channels] {
-        const char* p = std::getenv("SCDA_AUDIO_DUMP");
+        const char* p = std::getenv("SCPT_AUDIO_DUMP");
         std::string path = p && *p ? p : app::Get().audio_dump ? (port::HomeDir() / "logs" / "audio.f32").string() : "";
         FILE* f = path.empty() ? nullptr : std::fopen(path.c_str(), "ab");
         if (f) {

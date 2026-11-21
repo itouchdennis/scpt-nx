@@ -24,7 +24,7 @@ void SetMicOpen(bool) {}
 
 }  // namespace audio
 
-#ifndef SCDA_SWITCH
+#ifndef SCPT_SWITCH
 namespace gyro {
 
 Turn Take(const Settings&) { return {}; }

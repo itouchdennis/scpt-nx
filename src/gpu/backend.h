@@ -92,7 +92,7 @@ inline std::atomic<bool> g_night_vision{false};
 struct ShadowTargets {
     uint32_t map = 0, color = 0, blur_lo = 0, blur_hi = 0;
 };
-// diagnostic: a key asked for the next frame's draw trace (gpu_vk.cpp's SCDA_DRAW_TRACE, F9 in the window)
+// diagnostic: a key asked for the next frame's draw trace (gpu_vk.cpp's SCPT_DRAW_TRACE, F9 in the window)
 inline std::atomic<bool> g_trace_request{false};
 inline ShadowTargets g_shadow;  // written under the D3D lock
 

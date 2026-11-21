@@ -3,10 +3,10 @@
 
 cmake_minimum_required(VERSION 3.25)
 if(WIN32)
-    project(scda VERSION 0.3.4 LANGUAGES C CXX RC)
+    project(scpt VERSION 0.3.4 LANGUAGES C CXX RC)
 else()
     # Linux and Nintendo Switch: cmake/portable.cmake
-    project(scda VERSION 0.3.4 LANGUAGES C CXX)
+    project(scpt VERSION 0.3.4 LANGUAGES C CXX)
 endif()
 
 set(CMAKE_CXX_STANDARD 20)
@@ -105,7 +105,7 @@ set_source_files_properties(src/app/system_info.cpp src/app/version.rc PROPERTIE
 # to <target>.dll beside it, which the executable delay loads: built here from the image's config (partitions as that
 # config sets them), while a release leaves it out and the executable builds it from the player's xbe
 # (src/app/game_code.cpp, which compiles with the same flags).
-function(scda_image target xbe config partitions game_dir)
+function(scpt_image target xbe config partitions game_dir)
     set(GEN ${CMAKE_CURRENT_SOURCE_DIR}/generated/${game_dir})
     set(GEN_SOURCES ${GEN}/x86_func_mapping.cpp)
     math(EXPR last "${partitions} - 1")
@@ -161,5 +161,5 @@ function(scda_image target xbe config partitions game_dir)
         COMMAND ${CMAKE_COMMAND} -E rm -f ${COMPILER_DIR}/work/${target}/built.txt)
 endfunction()
 
-scda_image(SCDA default.xbe scda_v2.toml 128 game)        # solo and co-op
-scda_image(SCDA_Versus sc4_adv.xbe sc4_adv.toml 64 versus)  # versus
+scpt_image(SCPT default.xbe scpt_v2.toml 128 game)        # solo and co-op
+scpt_image(SCPT_Versus sc4_adv.xbe sc4_adv.toml 64 versus)  # versus

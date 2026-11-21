@@ -3,7 +3,7 @@ There are no prebuilt NROs in any release: each release holds the source and the
 yourself, from your own copy of the game ([docs/HOW_TO_BUILD.md](docs/HOW_TO_BUILD.md)).
 
 scpt-nx starts from [scct-nx](https://github.com/itouchdennis/scct-nx) v0.3.0, which starts from
-[scda-nx](https://github.com/itouchdennis/scda-nx) v0.4.9; their changelogs have the history of the shared code. The
+[scpt-nx](https://github.com/itouchdennis/scpt-nx) v0.4.9; their changelogs have the history of the shared code. The
 entries below v0.3.4 are scct-nx's.
 
 ## v0.3.4

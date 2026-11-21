@@ -67,9 +67,9 @@ bool Device::Init() {
     ci.pApplicationInfo = &app;
     ci.enabledExtensionCount = uint32_t(exts.size());
     ci.ppEnabledExtensionNames = exts.data();
-    // SCDA_VK_VALIDATE=1: Khronos' validation layer, where it is installed
+    // SCPT_VK_VALIDATE=1: Khronos' validation layer, where it is installed
     const char* layer = "VK_LAYER_KHRONOS_validation";
-    if (const char* v = std::getenv("SCDA_VK_VALIDATE"); v && *v == '1') {
+    if (const char* v = std::getenv("SCPT_VK_VALIDATE"); v && *v == '1') {
         ci.enabledLayerCount = 1;
         ci.ppEnabledLayerNames = &layer;
         LOGI("vk: validation layer on");
@@ -80,7 +80,7 @@ bool Device::Init() {
         return false;
     }
 #define X(name) fn.name = reinterpret_cast<PFN_##name>(vkGetInstanceProcAddr(instance, #name));
-    SCDA_VK_INSTANCE_FUNCS(X)
+    SCPT_VK_INSTANCE_FUNCS(X)
 #undef X
     uint64_t s = 0;
     if (!port::CreateVulkanSurface(instance, &s)) return false;
@@ -116,8 +116,8 @@ bool Device::PickDevice() {
     fn.vkEnumeratePhysicalDevices(instance, &n, nullptr);
     std::vector<VkPhysicalDevice> all(n);
     fn.vkEnumeratePhysicalDevices(instance, &n, all.data());
-    // SCDA_VK_DEVICE=n: the nth device, as the driver lists them
-    const char* pick = std::getenv("SCDA_VK_DEVICE");
+    // SCPT_VK_DEVICE=n: the nth device, as the driver lists them
+    const char* pick = std::getenv("SCPT_VK_DEVICE");
     int best_rank = -1;
     for (uint32_t i = 0; i < n; i++) {
         VkPhysicalDeviceProperties p;
@@ -218,7 +218,7 @@ bool Device::CreateDevice() {
         LOGE("vk: no " #name);                                                                                        \
         ok = false;                                                                                                   \
     }
-    SCDA_VK_DEVICE_FUNCS(X)
+    SCPT_VK_DEVICE_FUNCS(X)
 #undef X
 
     VkPhysicalDeviceShaderObjectPropertiesEXT op{VK_STRUCTURE_TYPE_PHYSICAL_DEVICE_SHADER_OBJECT_PROPERTIES_EXT};

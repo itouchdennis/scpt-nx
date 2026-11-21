@@ -1,6 +1,6 @@
 // The release log's opening lines: what the game runs on and with which settings
 #ifndef _WIN32
-#ifndef SCDA_SWITCH
+#ifndef SCPT_SWITCH
 #include <sys/utsname.h>
 #endif
 
@@ -18,13 +18,13 @@ void LogSystem() {
     std::time_t now = std::time(nullptr);
     char date[32] = {};
     std::strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
-    const char* kBuild = logx::Verbose() ? " (" SCDA_COMMIT ", debug)" : "";
+    const char* kBuild = logx::Verbose() ? " (" SCPT_COMMIT ", debug)" : "";
     LOGR("Splinter Cell: Pandora Tomorrow XBE Recomp V%d%s, port (%s), %s", kVersion, kBuild, IMAGE_XBE, date);
     LOGR("Path: %s", ExeDir().string().c_str());
-#ifdef SCDA_CODE_OPT_NAME
-    LOGR("Game code: %s", SCDA_CODE_OPT_NAME);
+#ifdef SCPT_CODE_OPT_NAME
+    LOGR("Game code: %s", SCPT_CODE_OPT_NAME);
 #endif
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     LOGR("OS: Horizon");
 #else
     utsname u{};
@@ -117,7 +117,7 @@ void LogSystem() {
     char date[32] = {};
     std::strftime(date, sizeof(date), "%Y-%m-%d %H:%M:%S", std::localtime(&now));
     // Debug builds name their commit
-    const char* kBuild = logx::Verbose() ? " (" SCDA_COMMIT ", debug)" : "";
+    const char* kBuild = logx::Verbose() ? " (" SCPT_COMMIT ", debug)" : "";
     LOGR("Splinter Cell: Double Agent XBE Recomp V%d%s, %ls (%s), %s", kVersion, kBuild,
          std::filesystem::path(exe).filename().c_str(), IMAGE_XBE, date);
     LOGR("Path: %ls", ExeDir().c_str());

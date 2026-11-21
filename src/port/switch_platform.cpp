@@ -3,7 +3,7 @@
 // envSetNextLoad and exits; the launch data travels in hdd/launch.bin as on Windows.
 #include <arpa/inet.h>  // struct in_addr for nxlink.h
 #include <switch.h>
-#ifdef SCDA_VK
+#ifdef SCPT_VK
 #define VK_USE_PLATFORM_VI_NN
 #include <vulkan/vulkan.h>
 #endif
@@ -315,7 +315,7 @@ void Fatal(const std::string& title, const std::string& text) {
 }
 
 
-#ifdef SCDA_VK
+#ifdef SCPT_VK
 // NVK presents to the default NWindow through VK_NN_vi_surface; no SDL window holds it (sdl_window.cpp)
 std::vector<const char*> VulkanInstanceExtensions() {
     return {VK_KHR_SURFACE_EXTENSION_NAME, VK_NN_VI_SURFACE_EXTENSION_NAME};
@@ -366,9 +366,9 @@ bool SurfaceSizeDiffers(uint32_t, uint32_t) { return false; }
 void SetSurfaceSize(uint32_t, uint32_t) {}
 #endif
 
-// SCDA_STACK_MB in the environment file overrides it (16 MB as nfsu2-sw's game thread)
+// SCPT_STACK_MB in the environment file overrides it (16 MB as nfsu2-sw's game thread)
 size_t ThreadStackSize() {
-    const char* mb = std::getenv("SCDA_STACK_MB");
+    const char* mb = std::getenv("SCPT_STACK_MB");
     size_t n = mb ? size_t(std::atoi(mb)) : 0;
     return (n >= 1 && n <= 64 ? n : 16) << 20;
 }
@@ -805,7 +805,7 @@ extern "C" int __wrap_SDL_SYS_SetThreadPriority(int prio) {
 
 // libnx calls this for a CPU exception anywhere in the process: the host and guest state into the log, which is
 // then written out, before the process ends. Host addresses are relative to the NRO's start, for addr2line on
-// scda.elf.
+// scpt.elf.
 extern "C" {
 extern char __start__[];
 alignas(16) u8 __nx_exception_stack[0x8000];

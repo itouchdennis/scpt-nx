@@ -18,7 +18,7 @@ inline constexpr const char* kButtonModeNames[] = {"OFF WHILE HELD", "ON WHILE H
 
 struct Settings {
     bool enabled = false;
-#ifdef SCDA_SWITCH
+#ifdef SCPT_SWITCH
     bool aim_only = true;  // the gyro turns the view only while aiming (weapon raised, sniper scope), not the camera
     bool invert_x = true;  // the console's sensors turned the view the wrong way left and right
 #else

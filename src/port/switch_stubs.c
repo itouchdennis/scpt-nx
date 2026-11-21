@@ -1,4 +1,4 @@
-// The Switch's Vulkan build (SCDA_GPU=vk) links neither EGL nor libelf, yet two archives refer to them:
+// The Switch's Vulkan build (SCPT_GPU=vk) links neither EGL nor libelf, yet two archives refer to them:
 //   libSDL2.a's EGL glue (SDL_egl.o): no SDL window is opened, Vulkan presents to the default NWindow itself
 //   (switch_platform.cpp), so none of it runs; each call fails as EGL without a display would
 //   mesa-switch's NVK: libelf serves its CUBIN parser, which never runs on the Switch

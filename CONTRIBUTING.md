@@ -38,6 +38,6 @@ ci: compile the Linux and Switch ports without the game, check the scripts
 ```
 
 ## Releases
-The version lives in `CMakeLists.txt` (`project(scda VERSION x.y.z)`), and the Switch NRO carries it. For a release,
+The version lives in `CMakeLists.txt` (`project(scpt VERSION x.y.z)`), and the Switch NRO carries it. For a release,
 set it there, add a `## vx.y.z` section to [CHANGELOG.md](CHANGELOG.md), and push the tag `vx.y.z`: the release
 workflow checks that the two match and publishes the notes with the build scripts.
