@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: the existing tag whose release to update, e.g. v0.1.0
+        description: the existing tag whose release to update, e.g. v0.3.4
         required: true
 
 permissions:

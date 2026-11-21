@@ -71,7 +71,7 @@ scda-nx (Double Agent) in `sdmc:/switch/scda/`: all of them can be on the same c
   what they do first, or build by hand as the [README](https://github.com/itouchdennis/scpt-nx#readme) describes.
 - **An icon in the Homebrew Menu:** put a 256x256 JPEG named `icon.jpg` beside the script before building.
 - **Updates:** run the script again. It fetches the newest builder and rebuilds only what changed. The NRO it
-  replaces is kept in `out/BAK/`, named after its version (`scpt_v0.1.0.nro`).
+  replaces is kept in `out/BAK/`, named after its version (`scpt_v0.3.4.nro`).
 - **Disk space:** the builder and the build cache live in Docker. To remove them:
   `docker volume rm scpt-nx-cache` and `docker image rm ghcr.io/itouchdennis/scpt-nx-builder:latest`.
 - **Logs for a bug report:** add `logging = true` to `sdmc:/switch/scpt/scpt.toml`; the log is written to
