@@ -18,12 +18,10 @@
 #include <fstream>
 #include <iterator>
 #include <sstream>
-#include <string_view>
 #include <utility>
 
 #include <toml++/toml.hpp>
 
-#include "image_symbols.h"
 #include "app/app.h"
 #include "audio/output.h"
 #include "core/log.h"
@@ -149,9 +147,7 @@ void Load() {
     s.async_shaders = t["async_shaders"].value_or(s.async_shaders);
     s.shader_wait_ms = std::min(t["shader_wait_ms"].value_or(s.shader_wait_ms), 1000u);
     s.reverb = t["reverb"].value_or(s.reverb);
-    // on by default where it is the only way to the settings: Pandora Tomorrow has no game menu entry for them
-    constexpr bool kOverlayOnly = std::string_view(IMAGE_XBE) == "Offline.xbe";
-    s.settings_overlay = t["settings_overlay"].value_or(kOverlayOnly || s.settings_overlay);
+    s.settings_overlay = t["settings_overlay"].value_or(s.settings_overlay);
     s.logging = t["logging"].value_or(s.logging);
     s.profiling = t["profiling"].value_or(s.profiling);
     s.audio_dump = t["audio_dump"].value_or(s.audio_dump);
