@@ -1,6 +1,7 @@
 #pragma once
 #include <array>
 #include <cstdint>
+#include <string>
 #include <vector>
 
 #include "gpu/state.h"
@@ -61,5 +62,8 @@ bool Assemble(const State& s, uint32_t prim, uint32_t start, uint32_t count, con
 
 // after a draw: the registers its streams fed keep its last vertex's values in s.attr, as the console's do
 void LatchAttributes(State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* indices);
+
+// diagnostic: the first n vertices of a draw, every register its streams feed, as the vertex shader reads them
+std::string DescribeVertices(const State& s, uint32_t start, uint32_t count, const uint8_t* indices, uint32_t n);
 
 }  // namespace gpu

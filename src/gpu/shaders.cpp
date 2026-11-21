@@ -835,10 +835,11 @@ std::string PixelHlsl(const PixelKey& k) {
             else if (t.kind == kTexCube && (t.flags & kTexNormCube))
                 body += F("float4 t%d = float4(normalize(pT%d.xyz) * 0.5 + 0.5, tex%d.Sample(smp%d, pT%d.xyz).a);\n", i, i, i, i, i);
             else if (t.kind) body += F("float4 t%d = tex%d.Sample(smp%d, pT%d.xyz);\n", i, i, i, i);
-            // no texture: the XDK sets the stage's texture mode to none (0x342650 in Pandora Tomorrow), which reads
-            // as black, as in the programmable path; Pandora Tomorrow's shore leaves the water's stage 1 blend on
-            // after it and would turn white
-            else body += F("float4 t%d = float4(0,0,0,1);\n", i);
+            // no texture: the XDK sets the stage's texture mode to none (0x342650 in Pandora Tomorrow), which the
+            // console reads as 0, alpha too, yet its combiners still take every stage up to the first disabled one
+            // (0x3460B0). Pandora Tomorrow's shore and foam draw after the water with its stages 1 and 2 left on:
+            // white read white shore and opaque foam squares.
+            else body += F("float4 t%d = float4(0,0,0,0);\n", i);
             if ((t.flags & (kTexHdr | kTexWide)) == kTexHdr) body += F("t%d.rgb = saturate(t%d.rgb * hdr.y);\n", i, i);
             if ((k.alphakill >> i) & 1) body += F("if (t%d.a == 0) discard;\n", i);
             const char* dst = f[8] == 5 ? "tmp" : "cur";

@@ -1,6 +1,7 @@
 #include "gpu/vertex.h"
 
 #include <algorithm>
+#include <cstdio>
 #include <cstring>
 
 #include <dxgiformat.h>
@@ -464,6 +465,38 @@ bool Assemble(const State& s, uint32_t prim, uint32_t start, uint32_t count, con
     bool raw = RawReadable(s, inputs);
     if (raw) return AssembleRaw(s, inputs, d, out);
     return AssembleConverted(s, inputs, d, out);
+}
+
+std::string DescribeVertices(const State& s, uint32_t start, uint32_t count, const uint8_t* ip, uint32_t n) {
+    using namespace kernel;
+    VertexShader fvf_layout;
+    const VertexShader* layout = PickLayout(s, fvf_layout);
+    if (!layout) return {};
+    DrawRange d;
+    d.start = start;
+    d.count = count;
+    d.ip = ip;
+    std::string out;
+    for (uint32_t i = 0; i < n && i < count; i++) {
+        uint32_t id = DrawVertex(s, d, i);
+        char b[160];
+        std::snprintf(b, sizeof(b), " [%u]", id);
+        out += b;
+        for (int r = 0; r < 16; r++) {
+            const auto& in = layout->inputs[size_t(r)];
+            if (in.stream < 0 || !in.type || in.type == kTypeNone) continue;
+            const auto& st = s.streams[size_t(in.stream)];
+            if (!st.vb) continue;
+            uint32_t data = mem::VirtualFromPhysical(R32(st.vb + kResData));
+            if (!data) continue;
+            float f[4];
+            Convert(in.type, static_cast<const uint8_t*>(HostPtr(data + in.offset)) + size_t(id) * StrideOf(s, *layout, in), f);
+            std::snprintf(b, sizeof(b), " v%d(%.4g %.4g %.4g %.4g)", r, double(f[0]), double(f[1]), double(f[2]),
+                          double(f[3]));
+            out += b;
+        }
+    }
+    return out;
 }
 
 void LatchAttributes(State& s, uint32_t prim, uint32_t start, uint32_t count, const uint8_t* ip) {

@@ -2188,6 +2188,26 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
             }
             // the texture as the renderer decodes it, once: dumps/tex_<addr>_<w>x<h>.ppm
             const FormatInfo& tf = Format(d.format);
+            // DXT as it is: dumps/tex_<addr>_<w>x<h>.dds
+            if (tf.compressed && std::find(dumped.begin(), dumped.end(), d.data) == dumped.end()) {
+                dumped.push_back(d.data);
+                std::filesystem::create_directories("dumps");
+                char name[64];
+                std::snprintf(name, sizeof(name), "dumps/tex_%08X_%ux%u.dds", d.data, d.width, d.height);
+                uint32_t block = tf.bits == 8 ? 8 : 16, size = ((d.width + 3) / 4) * ((d.height + 3) / 4) * block;
+                uint32_t h[32] = {124, 0x81007, d.height, d.width, size};
+                h[18] = 32;
+                h[19] = 4;
+                const char* cc = tf.host == Host::BC1 ? "DXT1" : tf.host == Host::BC2 ? "DXT3" : "DXT5";
+                std::memcpy(&h[20], cc, 4);
+                h[26] = 0x1000;
+                if (FILE* f = std::fopen(name, "wb")) {
+                    std::fwrite("DDS ", 1, 4, f);
+                    std::fwrite(h, 4, 31, f);
+                    std::fwrite(kernel::HostPtr(d.data), 1, size, f);
+                    std::fclose(f);
+                }
+            }
             if (!tf.compressed && !tf.depth && tf.host == Host::BGRA8 &&
                 std::find(dumped.begin(), dumped.end(), d.data) == dumped.end()) {
                 dumped.push_back(d.data);
@@ -2203,6 +2223,23 @@ void VkBackend::Draw(const State& s, uint32_t prim, uint32_t start, uint32_t cou
                           d.width, d.height, d.data, t[kTssColorOp], t[kTssColorArg1], t[kTssColorArg2],
                           t[kTssAlphaOp], t[kTssAlphaArg1], t[kTssAlphaArg2]);
             tex += b;
+        }
+        // small draws: their first vertices and their texture stages
+        if (count <= 64 && !a.pretransformed) {
+            std::string st;
+            for (int t = 0; t < 4; t++) {
+                const auto& ts = s.tss[size_t(t)];
+                if (ts[kTssColorOp] <= 1) break;
+                const auto& m = s.transforms[16 + size_t(t)];
+                char b[200];
+                std::snprintf(b, sizeof(b), " st%d addr %u/%u index %X flags %X tm %g %g %g %g / %g %g %g %g / %g %g", t,
+                              ts[kTssAddressU], ts[kTssAddressV], ts[kTssTexCoordIndex], ts[kTssTextureTransformFlags],
+                              double(m[0]), double(m[1]), double(m[4]), double(m[5]), double(m[8]), double(m[9]),
+                              double(m[12]), double(m[13]), double(m[2]), double(m[6]));
+                st += b;
+            }
+            LOGI("trace   stages:%s", st.c_str());
+            LOGI("trace   verts:%s", DescribeVertices(s, start, count, indices, 6).c_str());
         }
         if (!sh.prog && (a.regs & 0x1E00) == 0x1E00) {
             const VertexElement& e = a.elements[0];
