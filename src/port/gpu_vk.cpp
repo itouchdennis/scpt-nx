@@ -1862,7 +1862,7 @@ void VkBackend::ApplyState(const State& s, const Assembled& a) {
     // EQUAL with depth writes off is a later pass over what is drawn already. Pandora Tomorrow lights its walls so:
     // the base pass by the fixed function transform, the light passes by vertex programs. The console runs both on
     // one vertex unit and meets the depth exactly; here the two round apart, and the lights came and went with the
-    // view. Such passes test LESS_OR_EQUAL, pulled kEqualSlack depth units closer (below).
+    // view. Such passes test LESS_OR_EQUAL, pulled a little closer (kEqualSlack below).
     bool equal_pass = zfunc == VK_COMPARE_OP_EQUAL && !zwrite && a.topology == Topology::Triangles;
     if (equal_pass) zfunc = VK_COMPARE_OP_LESS_OR_EQUAL;
     if (ztest != dyn_.ztest) fn.vkCmdSetDepthTestEnable(c, ztest);
@@ -1901,10 +1901,17 @@ void VkBackend::ApplyState(const State& s, const Assembled& a) {
         fn.vkCmdSetDepthBiasEnable(c, bias);
         dyn_.bias = bias;
     }
-    constexpr float kEqualSlack = 16.0f;  // depth units of 2^-24: a few times the two transforms' difference
+    // The two transforms differ in depth and, by a fraction of a pixel, in place: at a slant that moves the depth by
+    // its slope, so the slack has a slope part too (the light flickered on walls seen at an angle without it).
+    // The place differs in console pixels: in host pixels that is the render scale times more.
+    constexpr float kEqualSlack = 32.0f;       // depth units of 2^-24
+    constexpr float kEqualSlopeSlack = 1.0f;   // times the triangle's depth slope per console pixel
     float bconst = offset ? float(std::lround(Bits(SimpleState(s, kMDepthOffset)) * kDepth24Max / s.zscale)) : 0;
-    if (equal_pass) bconst -= kEqualSlack;
     float bslope = offset ? Bits(SimpleState(s, kMSlopeScale)) : 0;
+    if (equal_pass) {
+        bconst -= kEqualSlack;
+        bslope -= kEqualSlopeSlack * std::max(scale_, 1.0f);
+    }
     if (bconst != dyn_.bias_const || bslope != dyn_.bias_slope) {
         fn.vkCmdSetDepthBias(c, bconst, 0.0f, bslope);
         dyn_.bias_const = bconst;
