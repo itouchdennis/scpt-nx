@@ -13,8 +13,9 @@ Pandora Tomorrow's campaign (`Offline.xbe`, XDK 1.0.5788) on Linux and the Switc
   tests on occlusion queries, the glow and thermal corner passes, stages without a texture as the console reads
   them, vertex registers keeping their last value, and the light passes over walls (depth EQUAL) steady.
 - Sound: the stream thread's 10 ms rounds, so speech, music and ambience play at their speed.
-- The settings as an overlay (L + R + D-pad right, F10), on by default; gyro aiming and the mouse through the right
-  stick; draws wait up to 50 ms a frame for their shaders instead of vanishing.
+- The settings in the game's own menu: RECOMP OPTIONS in the pause menu opens a page in the game's frame with the
+  display, graphics and controller settings and gyro aiming. Gyro aiming and the mouse turn the view through the
+  right stick; draws wait up to 50 ms a frame for their shaders instead of vanishing.
 - F9 on Linux traces a frame with every draw's target, textures and shaders, for debugging.
 
 ## v0.3.0

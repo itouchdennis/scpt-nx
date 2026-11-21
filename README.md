@@ -42,9 +42,8 @@ respective owners.
 - [x] menus and into a mission (the launcher relaunches `Offline.xbe`)
 - [x] the first mission: geometry, lighting, water, night and thermal vision
 - [x] sound, music and speech
-- [x] the settings as an overlay, gyro aiming, mouse look on Linux
+- [x] the settings in the game's pause menu (RECOMP OPTIONS), gyro aiming, mouse look on Linux
 - [ ] the whole campaign, saves across missions
-- [ ] the settings in the game's own menu (as in Chaos Theory and Double Agent)
 - [ ] the builder image and a first release
 
 Versus (`Online.xbe`) and the launcher are not part of it.
@@ -167,14 +166,15 @@ Logging is off by default. To write the full log (and `boot.txt`) to `sdmc:/swit
 for example, add `logging = true` to `sdmc:/switch/scpt/scpt.toml`. A crash still writes `crash.txt` either way.
 
 ### Settings
-Pandora Tomorrow's own menu has no entry for the port's settings yet, so they are an overlay over the game:
-**L + R + D-pad right** opens it (F10 on a keyboard). It has the display and graphics settings, the CPU clock, the
-controller (dead zone, inversion, vibration, button layout) and gyro aiming. Rows that Chaos Theory's and Double Agent's
-game patches carry and Pandora Tomorrow does not have yet (field of view, shadows, co-op) are left out. Everything is
-saved in `sdmc:/switch/scpt/scpt.toml`.
+The port's settings are in the game's own menu: pause a mission (Start) and choose **RECOMP OPTIONS** in the GAME
+MENU. The page lists the display and graphics settings, the CPU clock, the controller (dead zone, inversion,
+vibration, button layout) and gyro aiming; Up and Down choose a row, Left, Right and A change its value, B goes
+back. Rows that Chaos Theory's and Double Agent's game patches carry and Pandora Tomorrow does not have yet (field of
+view, shadows, co-op) are left out. Everything is saved in `sdmc:/switch/scpt/scpt.toml`; `settings_overlay = true`
+there adds the same settings as an overlay on **L + R + D-pad right** (F10 on a keyboard).
 
-Gyro aiming (Controller page) turns the view through the right stick, beside the stick itself: the game has no look
-code of its own for it, so the controller's turn is sent as the stick tilt that turns the view as fast.
+Gyro aiming turns the view through the right stick, beside the stick itself: the game has no look code of its own
+for it, so the controller's turn is sent as the stick tilt that turns the view as fast.
 
 ### On Linux
 The same sources build a Linux executable, the quick test bed: `cmake -S . -B build/linux-vk -G Ninja
@@ -186,7 +186,7 @@ window has no focus. The keyboard plays as in Chaos Theory's port, the mouse tur
 ## Clocks and overclocking
 The port runs the Switch at Nintendo's official clocks for games (CPU 1020 MHz, GPU 384 MHz handheld or 768 MHz
 docked, memory 1331 or 1600 MHz) and sets them again after docking, the HOME menu and sleep. Pandora Tomorrow is bound
-by the CPU (the game's own thread), so the overlay's **CPU clock** (`cpu_clock = 1785` in `scpt.toml`, the official
+by the CPU (the game's own thread), so the **CPU clock** in RECOMP OPTIONS (`cpu_clock = 1785` in `scpt.toml`, the official
 boost clock, at the cost of battery) helps the frame rate most. Overclocking beyond that is left to your own tools,
 such as [sys-clk](https://github.com/retronx-team/sys-clk) or Horizon OC. For Double Agent these handheld values were
 tested and recommended: CPU 1428, GPU 460, memory 1600 MHz.

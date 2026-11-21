@@ -60,7 +60,7 @@ on a real Windows PC either. If you try it, please report how it went in an issu
 On the first start the shaders are built while you play, so the game can stutter or things appear a moment late. They
 are saved on the SD card and load at once from then on.
 
-The port's settings open over the game with **L + R + D-pad right**.
+The port's settings are in the game's pause menu: **RECOMP OPTIONS**.
 
 scpt-nx keeps everything in `sdmc:/switch/scpt/`, apart from scct-nx (Chaos Theory) in `sdmc:/switch/scct/` and
 scda-nx (Double Agent) in `sdmc:/switch/scda/`: all of them can be on the same card.
