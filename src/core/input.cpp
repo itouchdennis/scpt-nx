@@ -1249,6 +1249,11 @@ constexpr float kStickFullDegrees = 147.0f;  // a second at full tilt
 constexpr float kStickDeadZone = 0.25f;
 void GyroStick(Pad& p) {
     if (!kGyroStick || !app::Get().gyro.enabled) return;
+    // only while aiming (the game patches tell, src/scpt/aiming.cpp): the turn meanwhile is taken and dropped
+    if (app::Get().gyro.aim_only && !g_aiming) {
+        gyro::Take(app::Get().gyro);
+        return;
+    }
     using clock = std::chrono::steady_clock;
     // polls closer than this reuse the last tilt: a frame that reads the pad twice keeps the gyro in both
     constexpr float kMinPoll = 0.008f;

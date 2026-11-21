@@ -22,6 +22,7 @@
 #include "core/log.h"
 #include "game/console.h"
 #include "kernel/memory.h"
+#include "scpt/scpt.h"
 #include "scpt/unreal.h"
 #include "xdk/hle.h"
 
@@ -317,6 +318,7 @@ void SettingsInput(X86Context& ctx, uint16_t pressed) {
 namespace game {
 
 void FrameTick(X86Context& ctx) {
+    scpt::UpdateAiming();
     bool a_pressed = std::exchange(g_in.a_pressed, false);
     uint16_t pressed = std::exchange(g_in.pressed, 0);
     if (!Resolve()) return;
