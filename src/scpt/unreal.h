@@ -21,6 +21,7 @@ uint32_t FindName(std::string_view text);  // the FName index, ~0u when there is
 std::string_view NameText(uint32_t name);
 uint32_t ObjectName(uint32_t obj);
 uint32_t ObjectClass(uint32_t obj);
+bool Valid(uint32_t obj);  // a readable object with a readable class
 bool ClassIs(uint32_t obj, uint32_t class_name);       // the object's class, not its parents
 uint32_t FindField(uint32_t cls, uint32_t name);       // a function or property of the class or its parents
 uint32_t PropertyOffset(uint32_t cls, std::string_view name);  // ~0u when it has none

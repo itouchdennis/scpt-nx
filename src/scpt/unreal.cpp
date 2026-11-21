@@ -46,8 +46,9 @@ std::string_view NameText(uint32_t name) {
     return Readable(e) ? std::string_view(static_cast<const char*>(HostPtr(e + kNameText))) : std::string_view();
 }
 
-uint32_t ObjectName(uint32_t obj) { return R32(obj + kName); }
-uint32_t ObjectClass(uint32_t obj) { return R32(obj + kClass); }
+uint32_t ObjectName(uint32_t obj) { return Readable(obj) ? R32(obj + kName) : ~0u; }
+uint32_t ObjectClass(uint32_t obj) { return Readable(obj) ? R32(obj + kClass) : 0; }
+bool Valid(uint32_t obj) { return Readable(obj) && Readable(ObjectClass(obj)); }
 
 bool ClassIs(uint32_t obj, uint32_t class_name) {
     uint32_t c = Readable(obj) ? ObjectClass(obj) : 0;
