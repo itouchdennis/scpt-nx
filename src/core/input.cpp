@@ -38,6 +38,9 @@
 
 namespace input {
 
+// the mouse as the right stick where the title has no mouse code of its own (below)
+void MouseStick(Pad& p);
+
 namespace {
 
 std::atomic<bool> g_blocked{false};
@@ -811,6 +814,7 @@ void Keyboard(Pad& p) {
     PressMenuKeys(p, menu, back, keypad);
     NoteKeysHeld(keys);
     UpdateStick(p, move, camera, menu, back);
+    if (!no_mouse) MouseStick(p);
 }
 
 // the cursor stays where the drag started, so it hovers nothing on the way
@@ -1202,7 +1206,9 @@ void ReleaseCursor() {
     g_settle = true;
 }
 
-bool TakeMouse(float& dx, float& dy) {
+std::atomic<uint64_t> g_game_mouse_ms{0};  // when the title's own mouse code last took the mouse
+
+bool ReadMouse(float& dx, float& dy) {
     int x = g_dx.exchange(0);
     int y = g_dy.exchange(0);
     if ((!x && !y) || !Active() || (Pointing() && !MapDrag())) return false;
@@ -1214,6 +1220,23 @@ bool TakeMouse(float& dx, float& dy) {
     dx = float(s.invert_mouse_x ? -x : x) * (aim ? s.aim_horizontal_sensitivity : horizontal);
     dy = float(s.invert_mouse ? -y : y) * (aim ? s.aim_vertical_sensitivity : vertical);
     return true;
+}
+
+bool TakeMouse(float& dx, float& dy) {
+    g_game_mouse_ms = NowMs();
+    return ReadMouse(dx, dy);
+}
+
+// A title without its own mouse code (the portable builds' Pandora Tomorrow): the mouse turns the right stick, the
+// counts of one poll as its tilt, full at kMouseFullCounts.
+constexpr float kMouseFullCounts = 24.0f;
+void MouseStick(Pad& p) {
+    if (NowMs() - g_game_mouse_ms < 1000) return;
+    float dx, dy;
+    if (!ReadMouse(dx, dy)) return;
+    auto tilt = [](float d) { return int16_t(std::clamp(d / kMouseFullCounts, -1.0f, 1.0f) * kStickMax); };
+    if (dx != 0.0f) p.rx = tilt(dx);
+    if (dy != 0.0f) p.ry = tilt(-dy);  // the mouse's y is down, the stick's up
 }
 
 void SetTitleScreen(bool title) { g_title = title; }
