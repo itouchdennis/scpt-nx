@@ -7,6 +7,7 @@
 #include <cstring>
 #include <string>
 
+#include "app/app.h"
 #include "core/log.h"
 #include "port/port.h"
 
@@ -102,8 +103,9 @@ bool Device::Init() {
     fn.vkGetPhysicalDeviceFormatProperties(phys, VK_FORMAT_D24_UNORM_S8_UINT, &fp);
     constexpr VkFormatFeatureFlags kDepthUse =
         VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT | VK_FORMAT_FEATURE_SAMPLED_IMAGE_BIT;
-    depth_format = (fp.optimalTilingFeatures & kDepthUse) == kDepthUse ? VK_FORMAT_D24_UNORM_S8_UINT
-                                                                       : VK_FORMAT_D32_SFLOAT_S8_UINT;
+    depth_format = (fp.optimalTilingFeatures & kDepthUse) == kDepthUse && !app::Get().depth32
+                       ? VK_FORMAT_D24_UNORM_S8_UINT
+                       : VK_FORMAT_D32_SFLOAT_S8_UINT;
     LOGI("vk: %s, Vulkan %u.%u.%u, driver %08X, depth %s%s", props.deviceName, VK_API_VERSION_MAJOR(props.apiVersion),
          VK_API_VERSION_MINOR(props.apiVersion), VK_API_VERSION_PATCH(props.apiVersion), props.driverVersion,
          depth_format == VK_FORMAT_D24_UNORM_S8_UINT ? "D24S8" : "D32S8",

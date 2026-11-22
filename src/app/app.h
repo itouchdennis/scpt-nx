@@ -69,6 +69,7 @@ struct Settings {
                                      // only
     bool profiling = false;          // the Switch's perf diagnostics, with a log of measurements alone if logging is
                                      // off; scpt.toml only
+    bool depth32 = false;            // a 32 bit float depth buffer even where the console's 24 bits are there; scpt.toml only
     bool async_shaders = true;       // a draw whose pipeline needs compiling is skipped until the build threads have it; scpt.toml only
     uint32_t shader_wait_ms = 50;    // with async_shaders: per frame, how long draws wait for their builds before one is
                                      // skipped (a character vanished for a frame or two); scpt.toml only

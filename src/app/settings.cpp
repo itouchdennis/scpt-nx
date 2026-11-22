@@ -145,6 +145,7 @@ void Load() {
     if (auto on = t["ambient_occlusion"].value<bool>()) s.ambient_occlusion = *on;
     s.ambient_occlusion = std::min(t["ambient_occlusion"].value_or(s.ambient_occlusion), 2u);
     s.async_shaders = t["async_shaders"].value_or(s.async_shaders);
+    s.depth32 = t["depth32"].value_or(s.depth32);
     s.shader_wait_ms = std::min(t["shader_wait_ms"].value_or(s.shader_wait_ms), 1000u);
     s.reverb = t["reverb"].value_or(s.reverb);
     s.settings_overlay = t["settings_overlay"].value_or(s.settings_overlay);
@@ -249,6 +250,7 @@ toml::table Table() {
                   {"tone_mapping", s.tone_mapping},
                   {"ambient_occlusion", int64_t(s.ambient_occlusion)},
                   {"async_shaders", s.async_shaders},
+                  {"depth32", s.depth32},
                   {"shader_wait_ms", int64_t(s.shader_wait_ms)},
                   {"reverb", s.reverb},
                   {"settings_overlay", s.settings_overlay},
