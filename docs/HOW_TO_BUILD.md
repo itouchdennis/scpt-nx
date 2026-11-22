@@ -22,7 +22,7 @@ The first build takes a while (from about 20 minutes to over an hour, depending 
 quicker.
 
 ## Windows (10 or 11)
-**Windows has not been tested yet.** `build-nro-windows.bat` comes from scpt-nx, whose Windows builder has not been run
+**Windows has not been tested yet.** `build-nro-windows.bat` comes from scda-nx, whose Windows builder has not been run
 on a real Windows PC either. If you try it, please report how it went in an issue.
 
 1. Install [Docker Desktop](https://docs.docker.com/desktop/setup/install/windows-install/) and start it once. Let it
@@ -63,7 +63,7 @@ are saved on the SD card and load at once from then on.
 The port's settings are in the game's pause menu: **RECOMP OPTIONS**.
 
 scpt-nx keeps everything in `sdmc:/switch/scpt/`, apart from scct-nx (Chaos Theory) in `sdmc:/switch/scct/` and
-scpt-nx (Double Agent) in `sdmc:/switch/scpt/`: all of them can be on the same card.
+scda-nx (Double Agent) in `sdmc:/switch/scda/`: all of them can be on the same card.
 
 ## Good to know
 - **Please do not share the `.nro`.** It holds code made from your copy of the game, so it is for you only.
