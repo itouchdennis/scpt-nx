@@ -155,6 +155,9 @@ Weitere Eigenheiten:
   und folgt der Sprache.
 - **Eingabe auf der Seite:** `game::MenuPad` aus XInputGetState übernimmt D-Pad, Stick und A mit Repeat.
   `game::FrameTick` aus D3DDevice_Swap aktualisiert Werte und den Aim-Status.
+  - **Das A, das die Seite öffnet, ist dort noch gedrückt.** Es muss als *gehalten* übernommen werden
+    (`g_in.held = a ? 0x100 : 0`). Sonst stellt es bei jedem Öffnen die erste Zeile (Auflösung) um, und der User
+    meldet „Auflösung wird nicht gemerkt“.
 - **Zeilen:** Die Zeilen kommen aus `app::rows` (Seiten 0 und 2). Unpassende Zeilen werden in `GameHides` für `kScpt`
   ausgeblendet.
   - Die Zeile **PLAYER 1/2 nie anzeigen.** Ein Klick auf `keyboard+controller2` hat den User ausgesperrt.
