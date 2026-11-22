@@ -347,7 +347,8 @@ void MenuPad(int port, input::Pad& pad) {
     if (!g_set.page) {
         if (a && !g_in.a_down) g_in.a_pressed = true;
         g_in.a_down = a;
-        g_in.held = 0;
+        // the A that opens the settings page is still held there: held, not pressed, so it steps no row
+        g_in.held = a ? 0x100 : 0;
         return;
     }
     // the settings page: the D-pad (and the left stick as one) and A are the host's
