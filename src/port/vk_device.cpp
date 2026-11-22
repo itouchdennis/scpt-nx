@@ -98,7 +98,7 @@ bool Device::Init() {
              f & VK_MEMORY_PROPERTY_HOST_COHERENT_BIT ? " coherent" : "",
              f & VK_MEMORY_PROPERTY_HOST_CACHED_BIT ? " cached" : "");
     }
-    // the depth buffer: 24 bit as on the console where it can be sampled
+    // the depth buffer: 32 bit float (app depth32), else 24 bit as on the console where it can be sampled
     VkFormatProperties fp{};
     fn.vkGetPhysicalDeviceFormatProperties(phys, VK_FORMAT_D24_UNORM_S8_UINT, &fp);
     constexpr VkFormatFeatureFlags kDepthUse =
