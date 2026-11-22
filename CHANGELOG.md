@@ -5,6 +5,12 @@ yourself, from your own copy of the game ([docs/HOW_TO_BUILD.md](docs/HOW_TO_BUI
 scpt-nx starts from [scct-nx](https://github.com/itouchdennis/scct-nx) v0.3.0, which starts from
 [scda-nx](https://github.com/itouchdennis/scda-nx) v0.4.9; their changelogs have the history of the shared code. The
 entries below v0.3.4 are scct-nx's.
+## v0.3.6
+- The depth buffer is 32 bit float on the Switch too: with the console's 24 bits, shadows in the Embassy's courtyard
+  flickered light depending on the view. `depth32 = false` in `scpt.toml` goes back to 24 bits.
+- The README, the changelog and the build guide name Double Agent's port (scda-nx) and the upstream SCDA-XBERecomp
+  again where they mean them.
+
 ## v0.3.5
 
 ### Changed
