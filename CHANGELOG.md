@@ -5,6 +5,11 @@ yourself, from your own copy of the game ([docs/HOW_TO_BUILD.md](docs/HOW_TO_BUI
 scpt-nx starts from [scct-nx](https://github.com/itouchdennis/scct-nx) v0.3.0, which starts from
 [scda-nx](https://github.com/itouchdennis/scda-nx) v0.4.9; their changelogs have the history of the shared code. The
 entries below v0.3.4 are scct-nx's.
+## v0.3.7
+- The A that opens RECOMP OPTIONS in the pause menu no longer changes the first setting there: the resolution
+  switched between 720p and 1080p each time the page opened, so the chosen one seemed not to be kept.
+- `docs/LESSONS.md`: what the port learned, and `tools/ue/` to look into the engine's objects in a memory dump.
+
 ## v0.3.6
 - The depth buffer is 32 bit float on the Switch too: with the console's 24 bits, shadows in the Embassy's courtyard
   flickered light depending on the view. `depth32 = false` in `scpt.toml` goes back to 24 bits.
